@@ -27,9 +27,21 @@ A longevidade do jogo se apoia em três pilares principais:
 
 ## Mecânicas e Recursos  
 
+Os recursos centrais, oxigênio e comida, variam conforme as espécies adicionadas, o que cria um ciclo dinâmico: cada escolha tem impacto, e o jogador precisa equilibrar o ecossistema para mantê-lo vivo e próspero.
+
 ## Conexão com ODS  
+
+Mais do que uma experiência de entretenimento, Feed The Sea dialoga diretamente com os Objetivos de Desenvolvimento Sustentável (ODS), em especial com o de [*Vida na Água*](https://brasil.un.org/pt-br/sdgs/14). Ele conscientiza sobre a preservação marinha de forma prática e interativa, incentivando atitudes sustentáveis dentro do gameplay e oferecendo informações educativas sobre cada espécie inserida no ambiente.
 
 ## Diferenciais  
 
+O que torna o jogo único pode ser resumido em alguns pontos:
+
+* Controle criativo total sobre o ecossistema.
+* Integração de educação ambiental com diversão.
+* Eventos dinâmicos que simulam tanto fenômenos naturais quanto impactos humanos.
+* Equilíbrio entre relaxamento, aprendizado e desafio.
+
 ## Conclusão  
-- Resumo da proposta do jogo  
+
+Em resumo, Feed The Sea não é apenas um simulador, é uma maneira de observar os impactos humanos e também a relação da própria natureza consigo mesma, de diferentes perspectivas. O jogo incentiva a busca pelo conhecimento e instiga a compreensão de que a atitude irresponsável interfere diretamente na vida alheia e inocente.
