@@ -1,14 +1,29 @@
 # Documento de Definição de Projeto – *Feed The Sea*
 
-## Introdução  
+## Visão Geral
 
-## Público-Alvo  
+Feed The Sea é um sandbox de simulação ecológica no qual o jogador assume a missão de explorar, proteger e revitalizar ambientes aquáticos. O diferencial do jogo está na liberdade criativa: cada jogador pode moldar e expandir seu ecossistema marinho à sua maneira, sem necessidade de seguir um roteiro fixo, enquanto descobre curiosidades sobre sustentabilidade e vida na água.
+
+### Público-Alvo  
+
+O público-alvo inclui jogadores casuais de todas as idades, amantes de simuladores e sandbox, além de pessoas interessadas em meio ambiente. A proposta é simples e acessível, mas com profundidade suficiente para prender tanto quem busca uma experiência relaxante quanto quem gosta de desafios e descobertas.
 
 ## Objetivos Iniciais (Guias de Jogabilidade)  
 
-## Liberdade e Expansão  
+Logo no início, o jogador recebe alguns *objetivos iniciais*, que funcionam mais como guias do que como metas obrigatórias:
 
-## Longevidade e Rejogabilidade  
+* Limpar o ambiente de resíduos da poluição e plantas mortas.
+* Introduzir as primeiras formas de vida, como produtores de oxigênio e alimento.
+
+A partir daí, a experiência se abre completamente, permitindo que o jogador expanda e personalize seu ambiente de forma livre. Não há caminho fixo — o mundo aquático se torna um reflexo da criatividade e das escolhas de cada um.
+
+### Longevidade e Rejogabilidade  
+
+A longevidade do jogo se apoia em três pilares principais:
+
+* *Variedade de espécies* que podem ser desbloqueadas e introduzidas no ambiente.
+* *Expansão contínua do ecossistema*, que cresce conforme o jogador mantém equilíbrio.
+* *Eventos aleatórios*, que podem trazer tanto oportunidades (recursos extras, novas condições ambientais) quanto desafios (tempestades, redemoinhos, poluição humana como lixo e vazamento de óleo).
 
 ## Mecânicas e Recursos  
 
