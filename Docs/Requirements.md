@@ -54,7 +54,7 @@ Esta seção descreve os requisitos funcionais que o jogo Feed The Sea deve ofer
 | --- | --- |
 | Nome: |   Disponibilidade de Recursos  |
 | Descrição: |   O jogo disponibiliza os recursos essenciais (oxigênio e alimento) para que o jogador gerencie os seres do seu ambiente. Quanto mais recursos o jogador tiver, mais ele pode expandir seu ambiente e adicionar novas formas de vida.   |
-| Atores: |  Jogador   |
+| Atores: |  Jogador, Sistema do Jogo   |
 | Prioridade: |   Essencial  |
 | Entradas e pré-condições: |     |
 | Saídas e pós-condições: |     |
@@ -65,7 +65,7 @@ Esta seção descreve os requisitos funcionais que o jogo Feed The Sea deve ofer
 | --- | --- |
 | Nome: |   Geração de Recursos  |
 | Descrição: |   O jogo deve disponibilizar mecanismos de geração dos recursos essenciais do ecossistema: oxigênio e alimento. O oxigênio é produzido por algas e outras plantas aquáticas, enquanto o alimento é disponibilizado por diferentes fontes, como plantas e cardumes de peixes.   |
-| Atores: |  Jogador   |
+| Atores: |  Jogador, Sistema do Jogo   |
 | Prioridade: |   Essencial  |
 | Entradas e pré-condições: |     |
 | Saídas e pós-condições: |     |
@@ -76,7 +76,7 @@ Esta seção descreve os requisitos funcionais que o jogo Feed The Sea deve ofer
 | --- | --- |
 | Nome: |   Eventos Aleatórios  |
 | Descrição: |   Eventos aleatórios, que podem trazer tanto oportunidades (recursos extras, novas condições ambientais) quanto desafios (tempestades, redemoinhos, poluição humana como lixo e vazamento de óleo).   |
-| Atores: |  Jogador   |
+| Atores: |  Jogador, Sistema do Jogo   |
 | Prioridade: |   Baixa  |
 | Entradas e pré-condições: |     |
 | Saídas e pós-condições: |     |
@@ -98,7 +98,7 @@ Esta seção descreve os requisitos funcionais que o jogo Feed The Sea deve ofer
 | --- | --- |
 | Nome: |   Informações Educativas  |
 | Descrição: |   O jogo deve apresentar informações educativas sobre cada espécie inserida.    |
-| Atores: |  Jogador   |
+| Atores: |  Jogador, Sistema do Jogo   |
 | Prioridade: |   Essencial  |
 | Entradas e pré-condições: |     |
 | Saídas e pós-condições: |     |
