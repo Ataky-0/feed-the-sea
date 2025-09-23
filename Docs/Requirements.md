@@ -8,8 +8,8 @@ Esta seção descreve os requisitos funcionais que o jogo Feed The Sea deve ofer
 
 | RF |  #1   |
 | --- | --- |
-| Nome: |   Variedades de Espécies  |
-| Descrição: |   O jogo deve permitir que o jogador desbloqueie novas espécies (animais e plantas) à medida que ele progride em recursos.  |
+| Nome: |   Gerenciar a Vida Marinha  |
+| Descrição: |   O jogador pode gerenciar a vida marinha do seu ambiente, possibilitando introduzir formas de vida (animais, plantas e algas) e incluir formas de gerar os recursos necessários para o gerenciamento.   |
 | Atores: |  Jogador   |
 | Prioridade: |   Essencial  |
 | Entradas e pré-condições: |     |
@@ -30,8 +30,8 @@ Esta seção descreve os requisitos funcionais que o jogo Feed The Sea deve ofer
 
 | RF |  #3   |
 | --- | --- |
-| Nome: |   Gerenciar a Vida Marinha  |
-| Descrição: |   O jogador pode gerenciar a vida marinha do seu ambiente, possibilitando introduzir formas de vida (animais, plantas e algas) e incluir formas de gerar os recursos necessários para o gerenciamento.   |
+| Nome: |   Variedades de Espécies  |
+| Descrição: |   O jogo deve permitir que o jogador desbloqueie novas espécies (animais e plantas) à medida que ele progride em recursos.  |
 | Atores: |  Jogador   |
 | Prioridade: |   Essencial  |
 | Entradas e pré-condições: |     |
@@ -52,6 +52,28 @@ Esta seção descreve os requisitos funcionais que o jogo Feed The Sea deve ofer
 
 | RF |  #5   |
 | --- | --- |
+| Nome: |   Disponibilidade de Recursos  |
+| Descrição: |   O jogo disponibiliza os recursos essenciais (oxigênio e alimento) para que o jogador gerencie os seres do seu ambiente. Quanto mais recursos o jogador tiver, mais ele pode expandir seu ambiente e adicionar novas formas de vida.   |
+| Atores: |  Jogador   |
+| Prioridade: |   Essencial  |
+| Entradas e pré-condições: |     |
+| Saídas e pós-condições: |     |
+| Fluxo principal: |     |
+| Fluxo secundário 1: |     |
+
+| RF |  #6   |
+| --- | --- |
+| Nome: |   Geração de Recursos  |
+| Descrição: |   O jogo deve disponibilizar mecanismos de geração dos recursos essenciais do ecossistema: oxigênio e alimento. O oxigênio é produzido por algas e outras plantas aquáticas, enquanto o alimento é disponibilizado por diferentes fontes, como plantas e cardumes de peixes.   |
+| Atores: |  Jogador   |
+| Prioridade: |   Essencial  |
+| Entradas e pré-condições: |     |
+| Saídas e pós-condições: |     |
+| Fluxo principal: |     |
+| Fluxo secundário 1: |     |
+
+| RF |  #7   |
+| --- | --- |
 | Nome: |   Eventos Aleatórios  |
 | Descrição: |   Eventos aleatórios, que podem trazer tanto oportunidades (recursos extras, novas condições ambientais) quanto desafios (tempestades, redemoinhos, poluição humana como lixo e vazamento de óleo).   |
 | Atores: |  Jogador   |
@@ -61,18 +83,7 @@ Esta seção descreve os requisitos funcionais que o jogo Feed The Sea deve ofer
 | Fluxo principal: |     |
 | Fluxo secundário 1: |     |
 
-| RF |  #6   |
-| --- | --- |
-| Nome: |   Disponibilidade de Recursos  |
-| Descrição: |   O jogo disponibiliza os recursos essenciais (oxigênio e alimento) para que o jogador gerencie os seres do seu ambiente. Esses recursos são gerados a partir de algas, para gerar oxigênio, cardumes e plantas, que geram alimento. Quanto mais recursos o jogador tiver, mais ele pode expandir seu ambiente e adicionar novas formas de vida.   |
-| Atores: |  Jogador   |
-| Prioridade: |   Essencial  |
-| Entradas e pré-condições: |     |
-| Saídas e pós-condições: |     |
-| Fluxo principal: |     |
-| Fluxo secundário 1: |     |
-
-| RF |  #7   |
+| RF |  #8   |
 | --- | --- |
 | Nome: |   Equilíbrio do Ecossistema  |
 | Descrição: |   O jogador deve fazer escolhas para manter o ecossistema equilibrado, aprimorando os índices de saúde e higiene geral do ambiente a fim de mantê-lo vivo e próspero.    |
@@ -83,7 +94,7 @@ Esta seção descreve os requisitos funcionais que o jogo Feed The Sea deve ofer
 | Fluxo principal: |     |
 | Fluxo secundário 1: |     |
 
-| RF |  #8   |
+| RF |  #9   |
 | --- | --- |
 | Nome: |   Informações Educativas  |
 | Descrição: |   O jogo deve apresentar informações educativas sobre cada espécie inserida.    |
