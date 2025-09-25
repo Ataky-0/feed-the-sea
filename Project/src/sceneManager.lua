@@ -1,3 +1,9 @@
+-- Tudo que ocorre na main que será usado nas cenas
+-- tem que ser replicado, esta relação é facilmente
+-- observada ao comparar a main.lua com o src/sceneManager.lua.
+
+-- Toda ação a princípio é capturada na main e jogada para a cena atual.
+
 local sceneManager = {
   current = nil,
   scenes = {}
@@ -33,6 +39,18 @@ end
 function sceneManager:keypressed(key)
   if self.current and self.current.keypressed then
     self.current:keypressed(key)
+  end
+end
+
+function sceneManager:keyreleased(key)
+  if self.current and self.current.keyreleased then
+    self.current:keyreleased(key)
+  end
+end
+
+function sceneManager:textinput(t)
+  if self.current and self.current.textinput then
+    self.current:textinput(t)
   end
 end
 
