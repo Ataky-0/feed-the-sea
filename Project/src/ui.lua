@@ -1,5 +1,33 @@
 local UI = {}
 
+-- Funções locais para auxílio
+
+local function updateInputText(input,newText)
+  input.text = newText
+  input.textObject:set(input.text)
+end
+
+-- Função para criar um input de texto
+function UI.newTextInput(label, labelPos, placeholder, x, y, w, h, font)
+  local textObject = love.graphics.newText(font or love.graphics.getFont(), "")
+  
+  return {
+    text = "",
+    label = label or "",
+    labelPos = labelPos or "top", -- top, bottom, left, right
+    placeholder = placeholder or "",
+    x = x,
+    y = y,
+    w = w,
+    h = h,
+    focused = false,
+    hovered = false,
+    textObject = textObject,
+    font = font or love.graphics.getFont(),
+    placeholderObject = love.graphics.newText(font or love.graphics.getFont(), placeholder or "")
+  }
+end
+
 -- Função para criar um botão
 function UI.newButton(text, x, y, w, h, action)
   return {
@@ -31,7 +59,7 @@ function UI.drawButton(button, font)
 
   -- conteudo/texto
   love.graphics.setColor(1,1,1)
-  love.graphics.printf(button.text, button.x, button.y + button.h/2 - 8, button.w, "center")
+  love.graphics.printf(button.text, button.x, button.y + button.h/4, button.w, "center")
 end
 
 function UI.drawText(text, x, y, limit, align, color, font)
@@ -50,6 +78,106 @@ function UI.clickButton(button, mouseButton)
   if mouseButton == 1 and button.hovered and button.action then
     button.action()
   end
+end
+
+-- Função para desenhar o input
+function UI.drawTextInput(input)
+  -- desenha label
+  if input.label ~= "" then
+    local labelObject = love.graphics.newText(input.font, input.label)
+    local lx, ly = input.x, input.y
+    
+    if input.labelPos == "top" then
+      ly = input.y - input.font:getHeight() - 2
+      love.graphics.draw(labelObject, lx, ly)
+    elseif input.labelPos == "bottom" then
+      ly = input.y + input.h + 2
+      love.graphics.draw(labelObject, lx, ly)
+    elseif input.labelPos == "left" then
+      lx = input.x - labelObject:getWidth() - 5
+      love.graphics.draw(labelObject, lx, input.y + input.h/2 - input.font:getHeight()/2)
+    elseif input.labelPos == "right" then
+      lx = input.x + input.w + 5
+      love.graphics.draw(labelObject, lx, input.y + input.h/2 - input.font:getHeight()/2)
+    end
+  end
+
+  -- caixa arredondada
+  if input.focused then
+    love.graphics.setColor(0.9, 0.6, 0.2) -- focado
+  elseif input.hovered then
+    love.graphics.setColor(0.6, 0.6, 0.6) -- hover
+  else
+    love.graphics.setColor(0.2, 0.2, 0.2) -- normal
+  end
+  love.graphics.rectangle("fill", input.x, input.y, input.w, input.h, 8, 8)
+
+  -- borda
+  love.graphics.setColor(0,0,0)
+  love.graphics.rectangle("line", input.x, input.y, input.w, input.h, 8, 8)
+
+  -- texto ou placeholder usando Text object
+  local displayObject = input.textObject
+  local textColor = {1, 1, 1}
+  
+  if input.text == "" and not input.focused then
+    displayObject = input.placeholderObject
+    textColor = {0.7, 0.7, 0.7}
+  end
+  
+  love.graphics.setColor(textColor)
+  local textX = input.x + 5
+  local textY = input.y + input.h/2 - displayObject:getHeight()/2
+  
+  -- Truncar texto se for muito longo
+  local textWidth = displayObject:getWidth()
+  if textWidth > input.w - 10 then
+    love.graphics.draw(displayObject, textX, textY, 0, (input.w - 10) / textWidth, 1)
+  else
+    love.graphics.draw(displayObject, textX, textY)
+  end
+end
+
+-- Hover do input
+function UI.updateTextInputHover(input, mx, my)
+  input.hovered = mx > input.x and mx < input.x + input.w and my > input.y and my < input.y + input.h
+end
+
+-- Clique no input
+function UI.clickTextInput(input, mouseButton)
+  if mouseButton == 1 then
+    input.focused = input.hovered
+  end
+end
+
+-- Captura o input (para ações extras)
+function UI.keypressedTextInput(input, key)
+  if input.focused then
+    if key == "backspace" then
+      updateInputText(input,input.text:sub(1, -2))
+    elseif key == "return" or key == "kpenter" or key == "escape" then
+      input.focused = false
+    end
+  end
+end
+
+function UI.textinputTextInput(input, t)
+  if input.focused then
+    input.text = input.text .. t
+    input.textObject:set(input.text)
+  end
+end
+
+-- Função para atualizar o texto do botão (útil se o texto mudar dinamicamente)
+function UI.setButtonText(button, newText)
+  button.text = newText
+  button.textObject:set(newText)
+end
+
+-- Função para atualizar o placeholder do input
+function UI.setInputPlaceholder(input, newPlaceholder)
+  input.placeholder = newPlaceholder
+  input.placeholderObject:set(newPlaceholder)
 end
 
 return UI
