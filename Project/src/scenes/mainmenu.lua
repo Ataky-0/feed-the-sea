@@ -25,7 +25,7 @@ function mainmenu:load()
       if text == "Options" then
         sceneManager:changeScene("options")
       elseif text == "New Game" then
-        print("Novo jogo iniciado!") --TODO
+        sceneManager:changeScene("newgame")
       elseif text == "Load Game" then
         print("Carregar jogo!") --TODO
       end
