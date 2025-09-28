@@ -119,6 +119,20 @@ Esta seção descreve os requisitos não funcionais que o jogo Feed The Sea deve
 | RNF |  #2   |
 | --- | --- |
 | Nome: |   Liberdade criativa  |
-| Descrição: |   O jogo não deve ter caminhos fixos ou obrigatórios, dando autonomia ao jogador    |
+| Descrição: |   O jogo não deve ter caminhos fixos ou obrigatórios, dando autonomia ao jogador.    |
+| Atores: |  Jogador   |
+| Prioridade: |   Essencial  |
+
+| RNF |  #3   |
+| --- | --- |
+| Nome: |   Portabilidade  |
+| Descrição: |   O jogo deve ser executável em Windows, Linux e macOS.    |
+| Atores: |  Jogador   |
+| Prioridade: |   Essencial  |
+
+| RNF |  #4   |
+| --- | --- |
+| Nome: |   Confiabilidade  |
+| Descrição: |   O jogo deve ser capaz de salvar e carregar ambientes criados pelo jogador sem perda de dados.    |
 | Atores: |  Jogador   |
 | Prioridade: |   Essencial  |
