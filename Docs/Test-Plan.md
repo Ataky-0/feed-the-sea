@@ -1,14 +1,14 @@
-**Plano de Testes – *Feed The Sea***  
+# **Plano de Testes – *Feed The Sea***  
 Este documento descreve como será realizada a estratégia de testes do projeto *Feed The Sea*. O objetivo é definir os tipos de testes, o escopo, os casos de teste e as ferramentas utilizadas para garantir a qualidade do software.
 
-**Objetivo dos teste**
+## **Objetivo dos teste**
 
 * Validar que as funcionalidades descritas nos requisitos foram corretamente implementadas.  
 * Garantir que a experiência de jogo seja estável, intuitiva e coerente com os objetivos de sustentabilidade.  
 * Detectar falhas funcionais, lógicas e de interface antes da entrega.  
 * Assegurar que os recursos críticos (oxigênio, alimento, poluição) se comportem conforme as regras definidas.
 
-**Abordagens de testes utilizados**
+## **Abordagens de testes utilizados**
 
 | Testes Funcionais (caixa-preta) | Validar interações do jogador (ex.: limpar ambiente, adicionar espécies, expandir ecossistema). |
 | :---- | :---- |
@@ -16,8 +16,8 @@ Este documento descreve como será realizada a estratégia de testes do projeto 
 | **Testes de Usabilidade** | Avaliação manual para garantir clareza na interface e facilidade de aprendizado. |
 | **Testes de Performance (exploratórios)** | Verificar tempo de resposta e fluidez do jogo em diferentes dispositivos. |
 
-**Escopo dos testes**  
-**Dentro do escopo**
+## **Escopo dos testes**  
+### **Dentro do escopo**
 
 | ID | Funcionalidades | Objetivo do teste | Método de teste |
 | :---- | :---- | :---- | :---- |
@@ -31,7 +31,7 @@ Este documento descreve como será realizada a estratégia de testes do projeto 
 | RF08 | Acessibilidade | Avaliar simplicidade e clareza da interface | Usabilidade |
 | RF09 | Liberdade criativa | Verificar ausência de caminhos fixos obrigatórios  | Funcional |
 
-**Fora do Escopo**
+### **Fora do Escopo**
 
 | ID | Funcionalidades | Objetivo do teste | Método de teste |
 | :---- | :---- | :---- | :---- |
@@ -39,7 +39,7 @@ Este documento descreve como será realizada a estratégia de testes do projeto 
 | FS02 | Suporte a mobile | Não será testada nesta versão |  |
 | FS03 | Ranking online | Não será testada nesta versão |  |
 
-**Planejamento e Realização dos Testes**
+## **Planejamento e Realização dos Testes**
 
 | Caso de teste:  Separar resíduo corretamente | Técnica:  Teste funcional caixa preta | Status:  A executar | Funcionalidade a ser testada:  RF01 – Separar resíduos corretamente  |
 | :---- | :---- | :---- | :---- |
@@ -54,5 +54,5 @@ Este documento descreve como será realizada a estratégia de testes do projeto 
 | **Observações:**  |  |  |  |
 |  |  |  |  |
 
-**Conclusão**  
+## **Conclusão**  
 Este plano de testes assegura que as principais funcionalidades do jogo *Feed The Sea* serão validadas tanto manualmente quanto por meio de testes automatizados com LuaUnit. A estratégia cobre desde a lógica de recursos até a experiência do jogador, garantindo estabilidade, clareza e aderências aos objetivos do projeto.
