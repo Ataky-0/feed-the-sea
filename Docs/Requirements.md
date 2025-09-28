@@ -111,7 +111,7 @@ Esta seção descreve os requisitos não funcionais que o jogo Feed The Sea deve
 
 | RNF |  #1   |
 | --- | --- |
-| Nome: |   Acessibilidade  |
+| Nome: |   Usabilidade  |
 | Descrição: |   O jogo deve proporcionar uma experiência simples o bastante para jogadores casuais, mas com profundidade para prender jogadores mais avançados.    |
 | Atores: |  Jogador   |
 | Prioridade: |   Essencial  |
