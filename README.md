@@ -48,4 +48,6 @@ love Project/
 
 - 2: Extraia o arquivo `feed-the-sea-{BRANCH}.zip` e em seguida busque um arquivo `.love` e o execute normalmente por meio do seu gerenciador de arquivos. 
 
-**OBS:** Caso não tenha nenhum `.love`, que é o mais provável, você pode criar um facilmente compactando o diretório `Project/` e alterando a extensão do arquivo compactado gerado para `.love` e então executá-lo como instruído no início da etapa 2.
+**OBS:** Caso não tenha nenhum `.love`, que é o mais provável, você pode criar um facilmente compactando o **CONTÉUDO** do diretório `Project/` (não o diretório em si) e alterando a extensão do arquivo compactado gerado para `.love` e então executá-lo como instruído no início da etapa 2.
+
+Note que o arquivo compactado deve possuir o arquivo `main.lua` no primeiro nível — se você compactar o diretório em si dentro dele haverá a pasta `Project` como primeiro nível, logo não será um `.love` funcional.
