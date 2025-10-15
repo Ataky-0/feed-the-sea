@@ -1,5 +1,6 @@
-local UI = {}
+local utf8 = require("utf8")
 
+local UI = {}
 -- Funções locais para auxílio
 
 local function updateInputText(input,newText)
@@ -152,12 +153,17 @@ end
 
 -- Captura o input (para ações extras)
 function UI.keypressedTextInput(input, key)
-  if input.focused then
-    if key == "backspace" then
-      updateInputText(input,input.text:sub(1, -2))
-    elseif key == "return" or key == "kpenter" or key == "escape" then
-      input.focused = false
+  if not input.focused then return end
+
+  if key == "backspace" then
+    local byteoffset = utf8.offset(input.text, -1)
+    if byteoffset then
+      input.text = string.sub(input.text, 1, byteoffset - 1)
+      updateInputText(input, input.text)
     end
+
+  elseif key == "return" or key == "kpenter" or key == "escape" then
+    input.focused = false
   end
 end
 
