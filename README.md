@@ -28,7 +28,7 @@ cd feed-the-sea
 - 2: Agora, navegue até o diretório onde o projeto do jogo está de fato:
 
 ```cmd
-cd Project
+cd FeedTheSea
 ```
 
 - 3: Execute o projeto através do comando abaixo.
@@ -39,7 +39,7 @@ love .
  note que o '.' serve para indicar o diretório atual, você poderia portanto a partir do passo 1 rodar o comando abaixo, o que também funcionaria.
 
  ```cmd
-love Project/
+love FeedTheSea/
 ```
 
 ### Interface Gráfica
@@ -48,6 +48,6 @@ love Project/
 
 - 2: Extraia o arquivo `feed-the-sea-{BRANCH}.zip` e em seguida busque um arquivo `.love` e o execute normalmente por meio do seu gerenciador de arquivos. 
 
-**OBS:** Caso não tenha nenhum `.love`, que é o mais provável, você pode criar um facilmente compactando o **CONTÉUDO** do diretório `Project/` (não o diretório em si) e alterando a extensão do arquivo compactado gerado para `.love` e então executá-lo como instruído no início da etapa 2.
+**OBS:** Caso não tenha nenhum `.love`, que é o mais provável, você pode criar um facilmente compactando o **CONTÉUDO** do diretório `FeedTheSea/` (não o diretório em si) e alterando a extensão do arquivo compactado gerado para `.love` e então executá-lo como instruído no início da etapa 2.
 
-Note que o arquivo compactado deve possuir o arquivo `main.lua` no primeiro nível — se você compactar o diretório em si dentro dele haverá a pasta `Project` como primeiro nível, logo não será um `.love` funcional.
+Note que o arquivo compactado deve possuir o arquivo `main.lua` no primeiro nível — se você compactar o diretório em si dentro dele haverá a pasta `FeedTheSea` como primeiro nível, logo não será um `.love` funcional.
