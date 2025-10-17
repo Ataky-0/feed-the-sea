@@ -1,4 +1,5 @@
 local sceneManager = require("src.sceneManager")
+local timerManager = require("src.timerManager")
 
 function love.load()
   sceneManager:changeScene("mainmenu")
@@ -7,6 +8,7 @@ end
 
 function love.update(dt)
   sceneManager:update(dt)
+  timerManager:update(dt)
 end
 
 function love.draw()
