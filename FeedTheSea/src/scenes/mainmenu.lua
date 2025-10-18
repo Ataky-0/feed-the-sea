@@ -19,15 +19,15 @@ function mainmenu:load()
   local bx = (ww - bw) / 2
   local by = wh * 0.4
 
-  local labels = { "New Game", "Load Game", "Options" }
+  local labels = { "Novo Jogo", "Carregar Jogo", "Opções" }
   for i, text in ipairs(labels) do
     local btn = UI.newButton(text, bx, by + (i-1)*(bh + 15), bw, bh, function()
-      if text == "Options" then
+      if text == "Opções" then
         sceneManager:changeScene("options")
-      elseif text == "New Game" then
+      elseif text == "Novo Jogo" then
         sceneManager:changeScene("newgame")
-      elseif text == "Load Game" then
-        print("Carregar jogo!") --TODO
+      elseif text == "Carregar Jogo" then
+        sceneManager:changeScene("loadgame")
       end
     end)
     table.insert(self.buttons, btn)
