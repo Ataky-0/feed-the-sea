@@ -30,7 +30,7 @@ function UI.newTextInput(label, labelPos, placeholder, x, y, w, h, font)
 end
 
 -- Função para criar um botão
-function UI.newButton(text, x, y, w, h, action)
+function UI.newButton(text, x, y, w, h, action, font)
   return {
     text = text,
     x = x,
@@ -38,20 +38,69 @@ function UI.newButton(text, x, y, w, h, action)
     w = w,
     h = h,
     hovered = false,
-    action = action
+    action = action,
+    disabled = false,
+    font = font or love.graphics.getFont()
   }
+end
+
+-- Função para criar mensagem clicável
+function UI.newMessage(text, font)
+  local ww, wh = love.graphics.getDimensions()
+  local message = {
+    text = text or "",
+    x = ww / 2,
+    y = wh / 2,
+    alpha = 0.9,
+    font = font or love.graphics.getFont(),
+    hovered = false,
+    closed = false,
+    closable = true, -- fecha ao clicar
+  }
+  return message
+end
+
+-- Função para desenhar mensagem
+function UI.drawMessage(msg)
+  if msg.closed then return end
+
+  love.graphics.setFont(msg.font)
+  love.graphics.setColor(0, 0, 0, msg.alpha)
+  local tw = msg.font:getWidth(msg.text)
+  local th = msg.font:getHeight()
+  local padding = 16
+
+  love.graphics.rectangle(
+    "fill",
+    msg.x - tw / 2 - padding,
+    msg.y - th / 2 - padding / 2,
+    tw + padding * 2,
+    th + padding,
+    12, 12
+  )
+
+  love.graphics.setColor(1, 1, 1, msg.alpha)
+  love.graphics.printf(msg.text, msg.x - tw / 2, msg.y - th / 2, tw, "center")
 end
 
 -- Função para desenhar o botão
 function UI.drawButton(button, font)
-  love.graphics.setFont(font)
-  
+  if font then
+    love.graphics.setFont(font)
+  else
+    font = button.font
+  end
+
   if button.hovered then
     love.graphics.setColor(0.9, 0.6, 0.2) -- hover
   else
     love.graphics.setColor(0.2, 0.6, 0.8) -- normal
   end
-  
+
+  if button.disabled then
+    love.graphics.setColor(0.1, 0.1, 0.1)
+  end
+
   love.graphics.rectangle("fill", button.x, button.y, button.w, button.h, 12, 12)
 
   -- borda
@@ -71,12 +120,13 @@ end
 
 -- Função para atualizar hover
 function UI.updateButtonHover(button, mx, my)
+  if button.disabled then return end
   button.hovered = mx > button.x and mx < button.x + button.w and my > button.y and my < button.y + button.h
 end
 
 -- Função pra processar clique
 function UI.clickButton(button, mouseButton)
-  if mouseButton == 1 and button.hovered and button.action then
+  if mouseButton == 1 and button.hovered and button.action and not button.disabled then
     button.action()
   end
 end
@@ -151,7 +201,23 @@ function UI.clickTextInput(input, mouseButton)
   end
 end
 
--- Captura o input (para ações extras)
+-- Detectar clique para fechar mensagem
+function UI.clickMessage(msg, mx, my)
+  if msg.closed or not msg.closable then return end
+  local tw = msg.font:getWidth(msg.text)
+  local th = msg.font:getHeight()
+  local padding = 16
+  local x1 = msg.x - tw / 2 - padding
+  local y1 = msg.y - th / 2 - padding / 2
+  local x2 = x1 + tw + padding * 2
+  local y2 = y1 + th + padding
+
+  if mx > x1 and mx < x2 and my > y1 and my < y2 then
+    msg.closed = true
+  end
+end
+
+-- Captura o input em caixa de input (para ações extras)
 function UI.keypressedTextInput(input, key)
   if not input.focused then return end
 
