@@ -48,6 +48,7 @@ function newgame:load()
       if save then -- Aqui vamos inserir o feedback visual e então continuar o fluxo.
         self.createdFeedback = UI.newMessage("Save criado com sucesso!", self.messageFont)
         timerManager:set(1, function ()
+          self.createdFeedback.closed = true
           sceneManager:changeScene("loadgame")
         end)
       else
