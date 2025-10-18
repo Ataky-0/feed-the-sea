@@ -33,11 +33,79 @@ function loadgame:load()
   self.saves = savesManager.listSaves()
   self.currentPage = 1
   self.perPage = 6 -- 2 colunas x 3 linhas
+  self.confirmDialog = nil -- confirmação de deletar
   self:updatePagination()
 end
 
 function loadgame:updatePagination()
   self.totalPages = math.max(1, math.ceil(#self.saves / self.perPage))
+end
+
+-- abre uma janela de confirmação para deletar 'save'
+function loadgame:openConfirm(save)
+  -- não abrir outra se já existir
+  if self.confirmDialog then return end
+
+  local ww, wh = love.graphics.getDimensions()
+  local text = string.format("Deseja realmente deletar o %s?", save.name or "save")
+  local msg = UI.newMessage(text, self.smallFont)
+  msg.x = ww / 2
+  msg.y = wh / 2
+  msg.closable = false -- fechamos via botões
+  msg._saveRef = save
+
+  -- calcular botões posicionados abaixo da mensagem
+  local tw = msg.font:getWidth(msg.text)
+  local th = msg.font:getHeight()
+  local padding = 16
+  local boxW = tw + padding * 2
+  local boxH = th + padding
+
+  local btnW, btnH = 80, 36
+  local spacing = 16
+  local totalBtnsW = btnW * 2 + spacing
+
+  local bx = msg.x - totalBtnsW / 2
+  local by = msg.y + boxH / 2 + 12
+
+  msg._yesBtn = UI.newButton("Sim", bx, by, btnW, btnH, function()
+    -- executar deleção
+    savesManager.deleteSave(msg._saveRef.file)
+    self.saves = savesManager.listSaves()
+    self:updatePagination()
+    if self.currentPage > self.totalPages then
+      self.currentPage = self.totalPages
+    end
+    self.confirmDialog = nil
+  end, self.smallFont)
+
+  msg._noBtn = UI.newButton("Não", bx + btnW + spacing, by, btnW, btnH, function()
+    self.confirmDialog = nil
+  end, self.smallFont)
+
+  self.confirmDialog = msg
+end
+
+function loadgame:updateConfirmPositions()
+  if not self.confirmDialog then return end
+  local msg = self.confirmDialog
+  local tw = msg.font:getWidth(msg.text)
+  local th = msg.font:getHeight()
+  local padding = 16
+  local boxW = tw + padding * 2
+  local boxH = th + padding
+
+  local btnW, btnH = msg._yesBtn.w, msg._yesBtn.h
+  local spacing = 16
+  local totalBtnsW = btnW * 2 + spacing
+
+  local bx = msg.x - totalBtnsW / 2
+  local by = msg.y + boxH / 2 + 12
+
+  msg._yesBtn.x = bx
+  msg._yesBtn.y = by
+  msg._noBtn.x = bx + btnW + spacing
+  msg._noBtn.y = by
 end
 
 function loadgame:draw()
@@ -84,6 +152,15 @@ function loadgame:draw()
     string.format("Página %d / %d", self.currentPage, self.totalPages),
     0, wh - 40, ww, "center", {1, 1, 1}, self.navFont
   )
+
+  -- Se houver diálogo de confirmação, desenhar por cima
+  if self.confirmDialog then
+    -- atualizar posições dos botões caso a janela tenha sido redimensionada
+    self:updateConfirmPositions()
+    UI.drawMessage(self.confirmDialog)
+    UI.drawButton(self.confirmDialog._yesBtn, self.smallFont)
+    UI.drawButton(self.confirmDialog._noBtn, self.smallFont)
+  end
 end
 
 function loadgame:drawSaveCard(save, x, y, w, h)
@@ -120,13 +197,10 @@ function loadgame:drawSaveCard(save, x, y, w, h)
       print("Carregando save:", save.name)
       -- sceneManager:changeScene("game", save.file)
     end)
+    -- alteração: abrir diálogo de confirmação em vez de deletar direto
+    local s = save -- capturar referência local
     save._deleteBtn = UI.newButton("Deletar", x + w - 130, y + h - 45, 120, 35, function()
-      savesManager.deleteSave(save.file)
-      self.saves = savesManager.listSaves()
-      self:updatePagination()
-      if self.currentPage > self.totalPages then
-        self.currentPage = self.totalPages
-      end
+      self:openConfirm(s)
     end)
   end
 
@@ -135,6 +209,13 @@ function loadgame:drawSaveCard(save, x, y, w, h)
 end
 
 function loadgame:mousemoved(x, y)
+  -- se houver diálogo, apenas atualizar hover dos botões do diálogo
+  if self.confirmDialog then
+    UI.updateButtonHover(self.confirmDialog._yesBtn, x, y)
+    UI.updateButtonHover(self.confirmDialog._noBtn, x, y)
+    return
+  end
+
   UI.updateButtonHover(self.backButton, x, y)
   UI.updateButtonHover(self.nextPageButton, x, y)
   UI.updateButtonHover(self.prevPageButton, x, y)
@@ -146,6 +227,16 @@ function loadgame:mousemoved(x, y)
 end
 
 function loadgame:mousepressed(x, y, button)
+  -- se houver diálogo, apenas processar os botões do diálogo
+  if self.confirmDialog then
+    local yesBtn = self.confirmDialog._yesBtn
+    local noBtn = self.confirmDialog._noBtn
+
+    UI.clickButton(yesBtn, button)
+    UI.clickButton(noBtn, button)
+    return
+  end
+
   UI.clickButton(self.backButton, button)
   UI.clickButton(self.nextPageButton, button)
   UI.clickButton(self.prevPageButton, button)
@@ -158,7 +249,12 @@ end
 
 function loadgame:keypressed(key)
   if key == "escape" then
-    sceneManager:changeScene("mainmenu")
+    -- fechar diálogo se aberto, senão voltar ao menu
+    if self.confirmDialog then
+      self.confirmDialog = nil
+    else
+      sceneManager:changeScene("mainmenu")
+    end
   elseif key == "left" and self.currentPage > 1 then
     self.currentPage = self.currentPage - 1
   elseif key == "right" and self.currentPage < self.totalPages then
