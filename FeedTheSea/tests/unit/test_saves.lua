@@ -37,6 +37,7 @@ local saves = require("savesManager")  -- módulo local em src/savesManager.lua
 -- Define testes
 TestSaves = {}
 
+-- ✅ TESTE 1: Criação de save com sucesso
 function TestSaves:testCreateSuccess()
     -- Criando um novo save
     local nome_save = "nome do save"
@@ -52,9 +53,9 @@ function TestSaves:testCreateSuccess()
     -- Verifica se a estrutura do save está correta
     local structure = saves.createSaveStruct()
     luaunit.assertEquals(save, structure)
-    
 end
 
+-- ✅ TESTE 2: Criação de save com falha simulada
 function TestSaves:testCreateFail()
     fake_fs = {}              -- reseta mock
     write_should_fail = true  -- força falha
@@ -67,13 +68,52 @@ function TestSaves:testCreateFail()
     luaunit.assertFalse(ok) -- ok deve ser false porque deu erro
     -- Verifica se a mensagem de erro está correta
     luaunit.assertTrue(
-        string.find(tostring(err), "Erro durante criação de save, arquivo não gerado.") ~= nil, 
+        string.find(tostring(err), "Erro durante criação de save, arquivo não gerado.") ~= nil,
         "Mensagem de erro incorreta"
     )
 
     write_should_fail = false  -- volta ao comportamento normal
 end
 
+-- ✅ TESTE 3: Listagem de saves existentes
+function TestSaves:testListSaves()
+    local savesCriados = { "save1", "save2", "save3" }
+
+    local os_time_original = os.time
+    local time_counter = 0
+
+    for _, nome in ipairs(savesCriados) do
+        -- sobrescreve temporariamente os.time() para gerar nomes únicos
+        os.time = function() return os_time_original() + time_counter end
+        time_counter = time_counter + 1
+
+        saves.createSave(nome)
+        print("✅ Criado:", nome)
+    end
+
+    -- restaura os.time original
+    os.time = os_time_original
+
+    -- pega lista de saves
+    local lista = saves.listSaves()
+
+    -- verifica se os saves criados estão na lista retornada
+    for _, nome in ipairs(savesCriados) do
+        local encontrado = false
+        for _, s in ipairs(lista) do
+            if s.name == nome then
+                encontrado = true
+                break
+            end
+        end
+        luaunit.assertTrue(encontrado, "Save não encontrado: " .. nome)
+    end
+
+    print("\n💾 Lista de saves detectada:")
+    for _, s in ipairs(lista) do
+        print(" -", s.name)
+    end
+end
 
 -- Roda os testes
 os.exit(luaunit.LuaUnit.run())
