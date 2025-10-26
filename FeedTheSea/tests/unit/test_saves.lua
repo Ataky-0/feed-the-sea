@@ -130,16 +130,16 @@ function TestSaves:testDeleteSaveSimple()
     end
 
     -- Cria dois saves
-    local _, meta1 = saves.createSave("save1")
-    local _, meta2 = saves.createSave("save2")
+    local _, meta1 = saves.createSave("Save_test1")
+    local _, meta2 = saves.createSave("save_test2")
 
     -- Restaura os.time
     os.time = os_time_original
 
     -- Mostra saves criados
     print("\nSaves criados:")
-    print(" -", meta1.file, "(save1)")
-    print(" -", meta2.file, "(save2)")
+    print(" -", meta1.file, "(Save_test1)")
+    print(" -", meta2.file, "(save_test2)")
 
     -- Deleta o segundo save
     saves.deleteSave(meta2.file)
