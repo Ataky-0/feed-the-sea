@@ -136,3 +136,10 @@ Esta seção descreve os requisitos não funcionais que o jogo Feed The Sea deve
 | Descrição: |   O jogo deve ser capaz de salvar e carregar ambientes criados pelo jogador sem perda de dados.    |
 | Atores: |  Jogador   |
 | Prioridade: |   Essencial  |
+
+| RNF |  #5   |
+| --- | --- |
+| Nome: |   Localização  |
+| Descrição: |   O jogo deve oferecer suporte aos idiomas português e inglês, permitindo alternar entre eles no menu de configurações.    |
+| Atores: |  Sistema do Jogo   |
+| Prioridade: |   Desejável  |
