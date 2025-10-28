@@ -9,7 +9,7 @@ local sceneManager = {
   scenes = {}
 }
 
-function sceneManager:changeScene(name)
+function sceneManager:changeScene(name, ...)
   if self.current and self.current.unload then
     self.current:unload()
   end
@@ -19,10 +19,12 @@ function sceneManager:changeScene(name)
   end
 
   self.current = self.scenes[name]
+
   if self.current.load then
-    self.current:load()
+    self.current:load(...)
   end
 end
+
 
 function sceneManager:update(dt)
   if self.current and self.current.update then
