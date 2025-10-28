@@ -9,7 +9,7 @@ local world = {}
 world.fishList = {}
 
 function world:load(saveMeta)
-	-- Carrega o conteúdo físico do save
+	-- Carrega o conteúdo do save
 	self.saveMeta = saveMeta
 	self.saveData = savesManager.loadGame(saveMeta.file)
 	if not self.saveData then
@@ -84,7 +84,7 @@ function world:load(saveMeta)
 		love.graphics.newFont(14)
 	)
 
-	-- Botão para spawnar entidade selecionada
+	-- Botão para spawnar entidade
 	self.spawnWindow.spawnEntityButton = UI.newButton(
 		"Spawnar",
 		self.spawnWindow.x + self.spawnWindow.w / 2 - 50,
@@ -94,7 +94,6 @@ function world:load(saveMeta)
 		function()
 			if self.spawnWindow.selectedEntity then
 				self:spawnFish(self.spawnWindow.selectedEntity)
-				-- self.spawnWindow.selectedEntity = nil
 			end
 		end
 	)
@@ -118,7 +117,7 @@ function world:load(saveMeta)
 	}
 end
 
--- Nova função para carregar entidades de acordo com a aba selecionada
+-- Função para carregar entidades de acordo com a aba selecionada
 function world:loadEntitiesForTab(tabIndex)
 	self.spawnWindow.currentTab = tabIndex
 	if tabIndex == 1 then            -- Aba "Peixes"
@@ -130,7 +129,7 @@ function world:loadEntitiesForTab(tabIndex)
 	end
 end
 
--- Função para spawnar um peixe no mundo
+-- Função para invocar (por enquanto) um peixe no mundo
 function world:spawnFish(entity)
 	local ww, wh = love.graphics.getDimensions()
 	local fish = {
@@ -144,7 +143,7 @@ function world:spawnFish(entity)
 		velocityX = (math.random() - 0.5) * 100,
 		velocityY = (math.random() - 0.5) * 100,
 		state = "idle",
-		stateTimer = math.random(2, 5), -- tempo até mudar de estado
+		stateTimer = math.random(2, 5),
 		animation = { currentFrame = 1, timer = 0, frameDuration = 0.1 },
 		sprite = love.graphics.newImage("assets/sprites/" .. entity.sprite),
 		quads = {}
@@ -189,11 +188,11 @@ function world:updateFishAnimations(dt)
 			end
 		end
 
-		-- Suavizar tilt vertical baseado na velocidade Y
+		-- Suavizar tilt vertical baseado na velocidade Y (eye candy)
 		local targetTilt = math.rad(-fish.velocityY * 0.4)
 		targetTilt = fish.velocityX <= 0 and targetTilt or -targetTilt
 		fish.currentTilt = fish.currentTilt or targetTilt
-		local tiltSpeed = 5 -- quão rápido gira para o alvo
+		local tiltSpeed = 5
 		fish.currentTilt = fish.currentTilt + (targetTilt - fish.currentTilt) * math.min(dt * tiltSpeed, 1)
 	end
 end
@@ -207,14 +206,14 @@ function world:drawFish()
 
 		love.graphics.push()
 		love.graphics.translate(fish.x, fish.y)
-		love.graphics.rotate(fish.currentTilt or 0) -- usar tilt suavizado
+		love.graphics.rotate(fish.currentTilt or 0)
 
-		-- aplicar flip no draw, sem mexer no scale global
+		-- Aplicar flip no draw, sem mexer no scale global
 		love.graphics.draw(
 			fish.sprite,
 			fish.quads[fish.animation.currentFrame],
-			0, 0, -- posição relativa a translate
-			0, -- rotação já aplicada
+			0, 0,
+			0,
 			sx * fish.size, fish.size,
 			fish.width / 2, fish.height / 2
 		)
@@ -293,7 +292,7 @@ function world:update(dt)
 	-- Atualizar animações dos peixes
 	self:updateFishAnimations(dt)
 
-	-- Movimentação simples dos peixes (opcional)
+	-- Movimentação simples
 	local ww, wh = love.graphics.getDimensions()
 	for _, fish in ipairs(self.fishList) do
 		fish.x = fish.x + fish.velocityX * dt
@@ -312,7 +311,7 @@ end
 function world:draw()
 	local ww, wh = love.graphics.getDimensions()
 
-	-- Fundo geral (azulado)
+	-- Fundo geral
 	love.graphics.clear(0 / 255, 40 / 255, 100 / 255)
 
 	-- Barra superior de interface
@@ -349,6 +348,7 @@ function world:draw()
 	self:drawSpawnWindow()
 
 	-- Nome do save no canto inferior esquerdo
+	--todo: fazer isso desaparecer quando tivermos um background bonito
 	love.graphics.setFont(self.uiFont)
 	love.graphics.setColor(1, 1, 1, 0.6)
 	love.graphics.print(self.saveMeta.name, 20, wh - 40)
@@ -377,7 +377,7 @@ function world:mousepressed(x, y, button)
 		UI.clickButton(self.spawnWindow.spawnEntityButton, button)
 
 		-- Verificar clique em entidades da lista
-		if button == 1 then -- Botão esquerdo do mouse
+		if button == 1 then
 			local y_offset = self.spawnWindow.y + 100
 			for i, entity in ipairs(self.spawnWindow.entityList) do
 				local entityY = y_offset + (i - 1) * 25
