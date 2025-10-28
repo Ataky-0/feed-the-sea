@@ -32,7 +32,7 @@ function loadgame:load()
 
   self.saves = savesManager.listSaves()
   self.currentPage = 1
-  self.perPage = 6 -- 2 colunas x 3 linhas
+  self.perPage = 6         -- 2 colunas x 3 linhas
   self.confirmDialog = nil -- confirmação de deletar
   self:updatePagination()
 end
@@ -113,7 +113,7 @@ function loadgame:draw()
   love.graphics.clear(0 / 255, 30 / 255, 80 / 255)
 
   -- Título
-  UI.drawText(self.title, 0, 30, ww, "center", {1, 1, 1}, self.titleFont)
+  UI.drawText(self.title, 0, 30, ww, "center", { 1, 1, 1 }, self.titleFont)
 
   -- Botões principais
   UI.drawButton(self.backButton, self.navFont)
@@ -143,6 +143,7 @@ function loadgame:draw()
   if self.currentPage > 1 then
     UI.drawButton(self.prevPageButton, self.navFont)
   end
+
   if self.currentPage < self.totalPages then
     UI.drawButton(self.nextPageButton, self.navFont)
   end
@@ -150,7 +151,7 @@ function loadgame:draw()
   -- Info de página
   UI.drawText(
     string.format("Página %d / %d", self.currentPage, self.totalPages),
-    0, wh - 40, ww, "center", {1, 1, 1}, self.navFont
+    0, wh - 40, ww, "center", { 1, 1, 1 }, self.navFont
   )
 
   -- Se houver diálogo de confirmação, desenhar por cima
@@ -194,10 +195,11 @@ function loadgame:drawSaveCard(save, x, y, w, h)
   -- Botões
   if not save._loadBtn then
     save._loadBtn = UI.newButton("Carregar", x + 10, y + h - 45, 120, 35, function()
-      print("Carregando save:", save.name)
-      -- sceneManager:changeScene("game", save.file)
+      print("Carregando save:", save.file)
+      -- Troca a cena para o mundo
+      sceneManager:changeScene("world", save)
     end)
-    -- alteração: abrir diálogo de confirmação em vez de deletar direto
+
     local s = save -- capturar referência local
     save._deleteBtn = UI.newButton("Deletar", x + w - 130, y + h - 45, 120, 35, function()
       self:openConfirm(s)
