@@ -85,31 +85,30 @@ end
 
 -- Função para desenhar o botão
 function UI.drawButton(button, font)
-  if font then
-    love.graphics.setFont(font)
-  else
-    font = button.font
-  end
+  local font = font or button.font or love.graphics.getFont() -- Operador ternário no Lua é outro nível
+  love.graphics.setFont(font)
 
-  if button.hovered then
+  -- Definir cor de fundo do botão
+  if button.disabled then
+    love.graphics.setColor(0.1, 0.1, 0.1)
+  elseif button.hovered then
     love.graphics.setColor(0.9, 0.6, 0.2) -- hover
   else
     love.graphics.setColor(0.2, 0.6, 0.8) -- normal
   end
 
-  if button.disabled then
-    love.graphics.setColor(0.1, 0.1, 0.1)
-  end
-
+  -- Desenhar fundo do botão
   love.graphics.rectangle("fill", button.x, button.y, button.w, button.h, 12, 12)
 
-  -- borda
-  love.graphics.setColor(0,0,0)
+  -- Borda do botão
+  love.graphics.setColor(0, 0, 0)
   love.graphics.rectangle("line", button.x, button.y, button.w, button.h, 12, 12)
 
-  -- conteudo/texto
-  love.graphics.setColor(1,1,1)
-  love.graphics.printf(button.text, button.x, button.y + button.h/4, button.w, "center")
+  -- Conteúdo/Texto centralizado verticalmente
+  love.graphics.setColor(1, 1, 1)
+  local textHeight = font:getHeight()
+  local textY = button.y + (button.h / 2) - (textHeight / 2)
+  love.graphics.printf(button.text, button.x, textY, button.w, "center")
 end
 
 function UI.drawText(text, x, y, limit, align, color, font)
