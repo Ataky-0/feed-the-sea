@@ -37,30 +37,43 @@ local function saveIndexFile()
     love.filesystem.write(indexFile, json.encode(saveIndex))
 end
 
--- Operações ---------------------------------------------------------------
-
--- Cria estrutura mínima de save
-function savesManager.createSaveStruct()
+-- Estrutura padrão de save ------------------------------------------------
+local function defaultSave()
     return {
         oxygen = 5,
         food = { herbivore = 0, carnivore = 0 },
         fish = {},
         producers = {},
+        biomass = 10,
     }
 end
 
--- Cria e salva um novo save
+-- Normaliza um save carregado para garantir campos novos
+local function normalizeSave(save)
+    local def = defaultSave()
+    for k, v in pairs(def) do
+        if save[k] == nil then
+            save[k] = v
+        end
+    end
+    return save
+end
+
+-- Operações ---------------------------------------------------------------
+
+function savesManager.createSaveStruct()
+    return defaultSave()
+end
+
 function savesManager.createSave(name)
     loadIndex()
 
     local save = savesManager.createSaveStruct()
     local filename = os.time() .. ".json"
 
-    -- Salva o save físico enquanto checa se funcionou
     assert(love.filesystem.write(saveDir .. filename, json.encode(save)), "Erro durante criação de save, arquivo não gerado.")
     print(string.format("Novo save, %s, criado com sucesso.",filename))
 
-    -- Atualiza index
     local meta = {
         order = nextSaveOrder,
         name = name or "nil",
@@ -75,31 +88,28 @@ function savesManager.createSave(name)
     return save, meta
 end
 
--- Salva um save existente (ex: após atualizações)
 function savesManager.saveGame(save, filename)
     ensureSaveDir()
     love.filesystem.write(saveDir .. filename, json.encode(save))
     savesManager.updateLastPlayed(filename)
 end
 
--- Carrega save completo
 function savesManager.loadGame(filename)
     if love.filesystem.getInfo(saveDir .. filename) then
         local contents = love.filesystem.read(saveDir .. filename)
-        return json.decode(contents)
+        local loaded = json.decode(contents)
+        return normalizeSave(loaded)
     else
         return nil
     end
 end
 
--- Lista metadados de todos os saves
 function savesManager.listSaves()
     loadIndex()
     table.sort(saveIndex, function(a, b) return a.order < b.order end)
     return saveIndex
 end
 
--- Atualiza a data de última vez jogado
 function savesManager.updateLastPlayed(filename)
     loadIndex()
     for _, entry in ipairs(saveIndex) do
@@ -111,23 +121,17 @@ function savesManager.updateLastPlayed(filename)
     end
 end
 
--- Deleta um save
 function savesManager.deleteSave(filename)
     loadIndex()
-
-    -- Remove o arquivo físico
     if love.filesystem.getInfo(saveDir .. filename) then
         love.filesystem.remove(saveDir .. filename)
     end
-
-    -- Remove do index
     for i, entry in ipairs(saveIndex) do
         if entry.file == filename then
             table.remove(saveIndex, i)
             break
         end
     end
-
     saveIndexFile()
 end
 
