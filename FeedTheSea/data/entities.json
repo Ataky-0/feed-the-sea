@@ -1,0 +1,21 @@
+{
+	"fish": {
+		"fish001": {
+			"name": "Sardinha",
+			"sprite": "sardine.png",
+			"diet": "herbivore",
+			"size": 0.5,
+			"oxygen_cost": 0.5,
+			"nutrient_cost": 0.1
+		}
+	},
+	"plant": {
+		"plant001": {
+			"name": "Alga",
+			"sprite": "algae.png",
+			"oxygen_production": 1,
+			"nutrient_value": 0.5,
+			"biomass_cost": 2.5
+		}
+	}
+}
