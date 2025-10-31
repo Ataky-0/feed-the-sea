@@ -163,5 +163,25 @@ function TestSaves:testDeleteSaveSimple()
     luaunit.assertFalse(deletadoExiste, "Save deletado ainda existe na lista final")
 end
 
+-- ✅ TESTE 5: Atualização da última vez jogado
+function TestSaves:testUpdateLastPlayed()
+    fake_fs = {}  -- reseta mock
+
+    local nome_save = "nome do save"
+    local _, meta = saves.createSave(nome_save)
+
+    -- verifica se a última vez jogado é igual à data atual
+    luaunit.assertEquals(meta.last_played, getCurrentDate())
+
+    -- espera 3 segundos para verificar se o tempo está sendo atualizado
+    local start = os.time()
+    repeat until os.time() - start >= 3
+
+    saves.updateLastPlayed(nome_save)
+
+    luaunit.assertEquals(meta.last_played, getCurrentDate())
+
+end
+
 -- Roda os testes
 os.exit(luaunit.LuaUnit.run())
