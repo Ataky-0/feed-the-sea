@@ -168,7 +168,7 @@ function TestSaves:testUpdateLastPlayed()
     fake_fs = {}  -- reseta mock
 
     local nome_save = "nome do save"
-    local _, meta = saves.createSave(nome_save)
+    local save, meta = saves.createSave(nome_save)
 
     -- verifica se a última vez jogado é igual à data atual
     luaunit.assertEquals(meta.last_played, getCurrentDate())
@@ -177,9 +177,20 @@ function TestSaves:testUpdateLastPlayed()
     local start = os.time()
     repeat until os.time() - start >= 3
 
-    saves.updateLastPlayed(nome_save)
+    -- verifica se a última vez jogado é atualizado
+    saves.saveGame(save, meta.file)
+    local load_saves = saves.listSaves()
 
-    luaunit.assertEquals(meta.last_played, getCurrentDate())
+    -- encontra a entrada correspondente pelo nome do arquivo
+    local updated_meta = nil
+    for _, m in ipairs(load_saves) do
+        if m.file == meta.file then
+            updated_meta = m
+            break
+        end
+    end
+
+    luaunit.assertEquals(updated_meta.last_played, getCurrentDate())
 
 end
 
