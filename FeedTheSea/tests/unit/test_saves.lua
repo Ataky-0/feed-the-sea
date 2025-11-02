@@ -76,6 +76,30 @@ function TestSaves:testCreateFail()
     write_should_fail = false  -- volta ao comportamento normal
 end
 
+-- Criação de save falho com nome vazio
+function TestSaves:testCreateWithInvalidNameShouldFail()
+    fake_fs = {}    -- reseta mock
+
+    -- entradas de nomes inválidas
+    local invalid_names = { "", "   " }
+
+    for _, save_name in ipairs(invalid_names) do
+        -- chamada da função em modo seguro
+        local ok, err = pcall(function()
+            saves.createSave(save_name)
+        end)
+
+        -- ok deve ser false porque deu erro
+        luaunit.assertFalse(ok, "A criação deveria falhar para nome: '" .. save_name .. "'")
+
+        -- Verifica se a mensagem de erro está correta
+        luaunit.assertTrue(
+            string.find(tostring(err), "Nome do save não pode estar vazio.") ~= nil,
+            "Mensagem de erro incorreta para nome: '" .. save_name .. "'"
+        )
+    end
+end
+
 -- Listagem de saves existentes
 function TestSaves:testListSaves()
     local savesCriados = { "save1", "save2", "save3" }
