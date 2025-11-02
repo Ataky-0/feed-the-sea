@@ -3,6 +3,26 @@ local json = require("src.lib.lunajson")
 
 local entitiesManager = {}
 
+function entitiesManager.getFishById(id)
+    local entities = assert(entitiesManager.loadEntities(), "Erro ao obter entidades")
+    local fish = entities.fish and entities.fish[id]
+    if fish then
+			fish.id = id
+			return fish
+    end
+    return nil
+end
+
+function entitiesManager.getPlantById(id)
+    local entities = assert(entitiesManager.loadEntities(), "Erro ao obter entidades")
+    local plant = entities.plant and entities.plant[id]
+    if plant then
+			plant.id = id
+			return plant
+    end
+    return nil
+end
+
 function entitiesManager.loadEntities()
 	local fileContent = love.filesystem.read("data/entities.json")
 	if not fileContent then

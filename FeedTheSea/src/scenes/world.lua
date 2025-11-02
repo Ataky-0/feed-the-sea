@@ -7,6 +7,8 @@ local world = {}
 
 -- Adicionando tabela para armazenar os peixes no mundo
 world.fishList = {}
+world.plantList = {}
+world.shoalList = {}
 
 function world:load(saveMeta)
 	-- Carrega o conteúdo do save
@@ -16,11 +18,35 @@ function world:load(saveMeta)
 		error("Erro: save não pôde ser carregado.")
 	end
 
+	self.fishBiomassTimer = 0
+	self.fishBiomassInterval = 10
+
+	self.background = love.graphics.newImage("assets/background.png")
+	self.backgroundW, self.backgroundH = self.background:getDimensions()
+
 	-- Fonts e layout
 	self.titleFont = love.graphics.newFont(32)
 	self.uiFont = love.graphics.newFont(18)
 	self.topBarHeight = 80
 	local ww, wh = love.graphics.getDimensions()
+
+	for id, qty in pairs(self.saveData.fish or {}) do
+		local ent = assert(entitiesManager.getFishById(id), "Peixe inexistente.") -- assume que existe
+		for _ = 1, qty do
+			self:spawnFish(ent)
+		end
+	end
+
+	for _, plant in ipairs(self.saveData.producers or {}) do
+		local ent = entitiesManager.getPlantById(plant.id)
+		if ent then
+			self:spawnPlant(ent)
+			local planted = self.plantList[#self.plantList]
+			planted.x = plant.x
+			planted.y = plant.y
+			planted.size = plant.size
+		end
+	end
 
 	--#region Janela de Entidades
 	-- Janela
@@ -92,8 +118,17 @@ function world:load(saveMeta)
 		100,
 		30,
 		function()
-			if self.spawnWindow.selectedEntity then
-				self:spawnFish(self.spawnWindow.selectedEntity)
+			local ent = self.spawnWindow.selectedEntity
+			if not ent then return end
+
+			if self:canAffordAndConsume(ent) then
+				if self.spawnWindow.currentTab == 1 then
+					self:spawnFish(ent) -- Peixes
+				elseif self.spawnWindow.currentTab == 2 then
+					self:spawnPlant(ent) -- Plantas  ←  NEW
+				end
+			else
+				print("Recursos insuficientes para spawnar " .. ent.name)
 			end
 		end
 	)
@@ -117,16 +152,189 @@ function world:load(saveMeta)
 	}
 end
 
+function world:unload()
+	-- fechar janela de spawn
+	if self.spawnWindow then
+		self.spawnWindow.visible = false
+		self.spawnWindow.selectedEntity = nil
+	end
+
+	-- montar dados que serão gravados
+	if self.saveMeta and self.saveData then
+		-- peixes
+		local fishCount = {}
+		for _, f in ipairs(self.fishList) do
+			fishCount[f.id] = (fishCount[f.id] or 0) + 1
+		end
+		self.saveData.fish = fishCount
+
+		-- plantas (produtores)
+		local prod = {}
+		for _, p in ipairs(self.plantList) do
+			table.insert(prod, {
+				id   = p.id,
+				x    = p.x,
+				y    = p.y,
+				size = p.size
+			})
+		end
+		self.saveData.producers = prod
+
+		-- gravar no disco
+		local ok, err = pcall(function()
+			savesManager.saveGame(self.saveData, self.saveMeta.file)
+		end)
+		if not ok then
+			print("[world] erro ao salvar:", err)
+		end
+	end
+
+	-- limpar listas de objetos
+	self.fishList = {}
+	self.plantList = {}
+	self.shoalList = {}
+end
+
 -- Função para carregar entidades de acordo com a aba selecionada
 function world:loadEntitiesForTab(tabIndex)
 	self.spawnWindow.currentTab = tabIndex
-	if tabIndex == 1 then            -- Aba "Peixes"
+	if tabIndex == 1 then          -- Aba "Peixes"
 		self.spawnWindow.entityList = entitiesManager.getFishList()
-	elseif tabIndex == 2 then        -- Aba "Plantas"
+	elseif tabIndex == 2 then      -- Aba "Plantas"
 		self.spawnWindow.entityList = entitiesManager.getPlantList()
-	elseif tabIndex == 3 then        -- Aba "Cardumes"
+	elseif tabIndex == 3 then      -- Aba "Cardumes"
 		self.spawnWindow.entityList = {} -- Implementar quando necessário
 	end
+end
+
+function world:canAffordAndConsume(entity)
+	local data = assert(self.saveData, "Save data não carregado.")
+
+	if entity.diet then
+		if not entity.oxygen_cost or not entity.nutrient_cost then
+			return false
+		end
+
+		if data.oxygen < entity.oxygen_cost then
+			return false
+		end
+
+		if entity.diet == "herbivore" then
+			if data.food.herbivore < entity.nutrient_cost then return false end
+		elseif entity.diet == "carnivore" then
+			if data.food.carnivore < entity.nutrient_cost then return false end
+		else
+			return false
+		end
+
+		data.oxygen = data.oxygen - entity.oxygen_cost
+
+		if entity.diet == "herbivore" then
+			data.food.herbivore = data.food.herbivore - entity.nutrient_cost
+		else
+			data.food.carnivore = data.food.carnivore - entity.nutrient_cost
+		end
+
+		if entity.biomass_cost then
+			if data.biomass < entity.biomass_cost then return false end
+			data.biomass = data.biomass - entity.biomass_cost
+		end
+
+		return true
+	end
+
+	if entity.biomass_cost and data.biomass < entity.biomass_cost then
+		return false
+	end
+
+	if entity.oxygen_cost and data.oxygen < entity.oxygen_cost then
+		return false
+	end
+
+	if entity.nutrient_cost then
+		if entity.diet == "herbivore" and data.food.herbivore < entity.nutrient_cost then
+			return false
+		elseif entity.diet == "carnivore" and data.food.carnivore < entity.nutrient_cost then
+			return false
+		end
+	end
+
+	-- Consumo
+	if entity.biomass_cost then data.biomass = data.biomass - entity.biomass_cost end
+	if entity.oxygen_cost then data.oxygen = data.oxygen - entity.oxygen_cost end
+	if entity.diet and entity.nutrient_cost then
+		if entity.diet == "herbivore" then
+			data.food.herbivore = data.food.herbivore - entity.nutrient_cost
+		else
+			data.food.carnivore = data.food.carnivore - entity.nutrient_cost
+		end
+	end
+
+	-- Produção
+	if entity.oxygen_production then
+		data.oxygen = data.oxygen + entity.oxygen_production
+	end
+	if entity.nutrient_value then
+		data.food.herbivore = data.food.herbivore + entity.nutrient_value
+	end
+
+	return true
+end
+
+local function biasedRandom(min, max, power)
+	power = power or 2
+	local t = math.random() ^ power
+	return min + (max - min) * t
+end
+
+local function isTooClose(x, y, list, minDist)
+	for _, p in ipairs(list) do
+		local dx, dy = p.x - x, p.y - y
+		if dx * dx + dy * dy < minDist * minDist then
+			return true
+		end
+	end
+	return false
+end
+
+function world:spawnPlant(entity)
+	local ww, wh   = love.graphics.getDimensions()
+	local groundY  = wh * 0.80
+	local minY     = groundY - 20
+	local maxY     = groundY + 90
+
+	local x        = math.random(100, ww - 100)
+	local y        = biasedRandom(minY, maxY, 2)
+
+	local attempts = 0
+	while isTooClose(x, y, self.plantList, 50) and attempts < 10 do
+		x = math.random(100, ww - 100)
+		y = biasedRandom(minY, maxY, 2)
+		attempts = attempts + 1
+	end
+
+	local entityWidth, entityHeight = entity.w, entity.h
+
+	local plant = {
+		id     = entity.id,
+		name   = entity.name,
+		x      = x,
+		y      = y,
+		size   = entity.size,
+		width  = entityWidth,
+		height = entityHeight,
+		sprite = love.graphics.newImage("assets/sprites/" .. entity.sprite),
+		quads  = {}
+	}
+
+	for i = 1, (entity.frames or 1) do
+		local quad = love.graphics.newQuad((i - 1) * entityWidth, 0,
+			entityWidth, entityHeight,
+			plant.sprite:getDimensions())
+		table.insert(plant.quads, quad)
+	end
+
+	table.insert(self.plantList, plant)
 end
 
 -- Função para invocar (por enquanto) um peixe no mundo
@@ -146,6 +354,7 @@ function world:spawnFish(entity)
 		stateTimer = math.random(2, 5),
 		animation = { currentFrame = 1, timer = 0, frameDuration = 0.1 },
 		sprite = love.graphics.newImage("assets/sprites/" .. entity.sprite),
+		biomass_production = entity.biomass_production or 0,
 		quads = {}
 	}
 
@@ -197,6 +406,37 @@ function world:updateFishAnimations(dt)
 	end
 end
 
+function world:drawPlants()
+	for _, plant in ipairs(self.plantList) do
+		love.graphics.setColor(1, 1, 1, 1)
+
+		love.graphics.push()
+		love.graphics.translate(plant.x, plant.y)
+		love.graphics.rotate(plant.currentTilt or 0)
+
+		if #plant.quads > 0 then
+			love.graphics.draw(
+				plant.sprite,
+				plant.quads[1],
+				0, 0,
+				0,
+				plant.size, plant.size,
+				plant.width / 2, plant.height / 2
+			)
+		else
+			love.graphics.draw(
+				plant.sprite,
+				0, 0,
+				0,
+				plant.size, plant.size,
+				plant.width / 2, plant.height / 2
+			)
+		end
+
+		love.graphics.pop()
+	end
+end
+
 -- Função para desenhar os peixes
 function world:drawFish()
 	for _, fish in ipairs(self.fishList) do
@@ -208,7 +448,7 @@ function world:drawFish()
 		love.graphics.translate(fish.x, fish.y)
 		love.graphics.rotate(fish.currentTilt or 0)
 
-		-- Aplicar flip no draw, sem mexer no scale global
+		-- Sem mexer no scale global
 		love.graphics.draw(
 			fish.sprite,
 			fish.quads[fish.animation.currentFrame],
@@ -292,7 +532,22 @@ function world:update(dt)
 	-- Atualizar animações dos peixes
 	self:updateFishAnimations(dt)
 
-	-- Movimentação simples
+	-- Geração temporizada de biomassa pelos peixes
+	self.fishBiomassTimer = self.fishBiomassTimer + dt
+
+	if self.fishBiomassTimer >= self.fishBiomassInterval then
+		local totalProd = 0
+
+		for _, fish in ipairs(self.fishList) do
+			totalProd = totalProd + fish.biomass_production
+		end
+
+		self.saveData.biomass = (self.saveData.biomass or 0) + totalProd
+
+		self.fishBiomassTimer = 0
+	end
+
+	-- Movimentação dos peixes
 	local ww, wh = love.graphics.getDimensions()
 	for _, fish in ipairs(self.fishList) do
 		fish.x = fish.x + fish.velocityX * dt
@@ -311,8 +566,12 @@ end
 function world:draw()
 	local ww, wh = love.graphics.getDimensions()
 
+	local backgroundScaleX = ww / self.backgroundW
+	local backgroundScaleY = wh / self.backgroundH
+
 	-- Fundo geral
-	love.graphics.clear(0 / 255, 40 / 255, 100 / 255)
+	love.graphics.setColor(1, 1, 1, 1)
+	love.graphics.draw(self.background, 0, 0, 0, backgroundScaleX, backgroundScaleY)
 
 	-- Barra superior de interface
 	love.graphics.setColor(0, 0, 0, 0.4)
@@ -334,11 +593,14 @@ function world:draw()
 
 	-- Linha 2: Herbívora e Carnívora
 	love.graphics.setColor(self.uiLabels.herb.color)
-	love.graphics.print(string.format("%s: %d", self.uiLabels.herb.label, self.saveData.food.herbivore), startX, y2)
+	love.graphics.print(string.format("%s: %.1f", self.uiLabels.herb.label, self.saveData.food.herbivore), startX, y2)
 	love.graphics.setColor(self.uiLabels.carn.color)
-	love.graphics.print(string.format("%s: %d", self.uiLabels.carn.label, self.saveData.food.carnivore), startX + spacing,
+	love.graphics.print(string.format("%s: %.1f", self.uiLabels.carn.label, self.saveData.food.carnivore),
+	startX + spacing,
 		y2)
 
+	-- Desenhar plantas
+	self:drawPlants()
 	-- Desenhar peixes
 	self:drawFish()
 
@@ -348,7 +610,7 @@ function world:draw()
 	self:drawSpawnWindow()
 
 	-- Nome do save no canto inferior esquerdo
-	--todo: fazer isso desaparecer quando tivermos um background bonito
+	--TODO: ainda irei retirar com um fade bonitinho, depois..
 	love.graphics.setFont(self.uiFont)
 	love.graphics.setColor(1, 1, 1, 0.6)
 	love.graphics.print(self.saveMeta.name, 20, wh - 40)

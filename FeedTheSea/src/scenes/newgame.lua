@@ -42,7 +42,14 @@ function newgame:load()
 
 			-- Pega o nome do save do input
 			local saveName = self.inputs[1].text
-			if saveName == "" then return end -- Todo: Adicionar guarda para evitar nomes vazios
+			if saveName == "" then
+				self.createdFeedback = UI.newMessage("Não pode criar um Save sem nome!", self.messageFont)
+				timerManager:set(1, function()
+					self.createdFeedback.closed = true
+					self.createButton.disabled = false
+				end)
+				return
+			end
 
 			local save, _ = savesManager.createSave(saveName)
 
