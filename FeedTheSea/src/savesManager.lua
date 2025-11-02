@@ -68,6 +68,8 @@ end
 function savesManager.createSave(name)
 	loadIndex()
 
+	assert(type(name) == "string" and not name:match("^%s*$"), "Nome do save não pode estar vazio.")
+
 	local save = savesManager.createSaveStruct()
 	local filename = os.time() .. ".json"
 
@@ -77,7 +79,7 @@ function savesManager.createSave(name)
 
 	local meta = {
 		order = nextSaveOrder,
-		name = name or "nil",
+		name = name,
 		created_at = getCurrentDate(),
 		last_played = getCurrentDate(),
 		file = filename,
