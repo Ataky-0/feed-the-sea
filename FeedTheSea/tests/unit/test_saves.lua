@@ -38,15 +38,15 @@ local saves = require("savesManager")  -- módulo local em src/savesManager.lua
 -- Define testes
 TestSaves = {}
 
--- ✅ TESTE 1: Criação de save com sucesso
+-- Criação de save com sucesso
 function TestSaves:testCreateSuccess()
     -- Criando um novo save
-    local nome_save = "nome do save"
-    local save, meta = saves.createSave(nome_save)
+    local save_name = "save name"
+    local save, meta = saves.createSave(save_name)
 
     -- Verifica se o save retornado tem os metadados corretos
     luaunit.assertEquals(meta.order, 1)
-    luaunit.assertEquals(meta.name, nome_save)
+    luaunit.assertEquals(meta.name, save_name)
     luaunit.assertEquals(meta.created_at, getCurrentDate())
     luaunit.assertEquals(meta.last_played, getCurrentDate())
     luaunit.assertEquals(meta.file, os.time() .. ".json")
@@ -56,7 +56,7 @@ function TestSaves:testCreateSuccess()
     luaunit.assertEquals(save, structure)
 end
 
--- ✅ TESTE 2: Criação de save com falha simulada
+-- Criação de save com falha simulada
 function TestSaves:testCreateFail()
     fake_fs = {}              -- reseta mock
     write_should_fail = true  -- força falha
@@ -76,7 +76,7 @@ function TestSaves:testCreateFail()
     write_should_fail = false  -- volta ao comportamento normal
 end
 
--- ✅ TESTE 3: Listagem de saves existentes
+-- Listagem de saves existentes
 function TestSaves:testListSaves()
     local savesCriados = { "save1", "save2", "save3" }
 
@@ -89,7 +89,6 @@ function TestSaves:testListSaves()
         time_counter = time_counter + 1
 
         saves.createSave(nome)
-        print("✅ Criado:", nome)
     end
 
     -- restaura os.time original
@@ -109,14 +108,9 @@ function TestSaves:testListSaves()
         end
         luaunit.assertTrue(encontrado, "Save não encontrado: " .. nome)
     end
-
-    print("💾 Lista de saves detectada:")
-    for _, s in ipairs(lista) do
-        print(" -", s.name)
-    end
 end
 
--- ✅ TESTE 4: Deletar save (simples e visual)
+-- Deletar save (simples e visual)
 function TestSaves:testDeleteSaveSimple()
     -- limpa ambiente
     fake_fs = {}
@@ -136,21 +130,11 @@ function TestSaves:testDeleteSaveSimple()
     -- Restaura os.time
     os.time = os_time_original
 
-    -- Mostra saves criados
-    print("\nSaves criados:")
-    print(" -", meta1.file, "(Save_test1)")
-    print(" -", meta2.file, "(save_test2)")
-
     -- Deleta o segundo save
     saves.deleteSave(meta2.file)
-    print("Save deletado:", meta2.file)
 
     -- Lista saves restantes
     local listaFinal = saves.listSaves()
-    print("Lista final de saves:")
-    for _, s in ipairs(listaFinal) do
-        print(" -", s.file, "(" .. s.name .. ")\n")
-    end
 
     -- Valida que o deletado não existe mais
     local deletadoExiste = false
@@ -163,12 +147,12 @@ function TestSaves:testDeleteSaveSimple()
     luaunit.assertFalse(deletadoExiste, "Save deletado ainda existe na lista final")
 end
 
--- ✅ TESTE 5: Atualização da última vez jogado
+-- Atualização da última vez jogado
 function TestSaves:testUpdateLastPlayed()
     fake_fs = {}  -- reseta mock
 
-    local nome_save = "nome do save"
-    local save, meta = saves.createSave(nome_save)
+    local save_name = "save name"
+    local save, meta = saves.createSave(save_name)
 
     -- verifica se a última vez jogado é igual à data atual
     luaunit.assertEquals(meta.last_played, getCurrentDate())
