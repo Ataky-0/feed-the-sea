@@ -1,6 +1,13 @@
 local sceneManager = require("src.sceneManager")
 local timerManager = require("src.timerManager")
 
+function love.quit()
+	local current = sceneManager.current
+	if current and current.unload then
+		current:unload()
+	end
+end
+
 function love.load()
 	sceneManager:changeScene("mainmenu")
 	love.keyboard.setKeyRepeat(true) -- Para o backspace não enganchar
