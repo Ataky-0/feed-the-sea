@@ -104,5 +104,27 @@ function TestEntities:testGetPlantById()
     luaunit.assertIsNil(entities.getPlantById("nonexistent_id"))
 end
 
+-- obtenção da lista de peixes
+function TestEntities:testGetFishList()
+    -- obtém lista de peixes
+    local fishList = entities.getFishList()
+
+    -- verifica se a lista de peixes está correta
+    luaunit.assertIsTable(fishList)
+    luaunit.assertEquals(#fishList, 1)  -- Deve conter 1 peixe
+    luaunit.assertEquals(fishList[1].name, "Sardinha")
+end
+
+-- obtenção da lista de plantas
+function TestEntities:testGetPlantList()
+    -- obtém lista de plantas
+    local plantList = entities.getPlantList()
+
+    -- verifica se a lista de plantas está correta
+    luaunit.assertIsTable(plantList)
+    luaunit.assertEquals(#plantList, 1)  -- Deve conter 1 planta
+    luaunit.assertEquals(plantList[1].name, "Alga")
+end
+
 -- Roda os testes
 os.exit(luaunit.LuaUnit.run())
