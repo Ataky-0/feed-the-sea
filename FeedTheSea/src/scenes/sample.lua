@@ -1,3 +1,4 @@
+-- sample.lua
 -- Código para servir de base para a criação de outras cenas
 -- Algumas (várias) coisas são opcionais e podem ser removidas caso você queira
 -- Este exemplo é baseado/retirado do optionsScene

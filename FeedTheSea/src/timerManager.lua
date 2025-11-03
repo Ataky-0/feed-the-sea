@@ -1,3 +1,4 @@
+-- timerManager.lua
 local timerManager = {}
 timerManager.timers = {}
 timerManager.nextId = 1

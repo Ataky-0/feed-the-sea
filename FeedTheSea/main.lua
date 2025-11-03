@@ -1,3 +1,5 @@
+-- main.lua
+-- Leia sceneManager.lua para entender como as cenas funcionam
 local sceneManager = require("src.sceneManager")
 local timerManager = require("src.timerManager")
 

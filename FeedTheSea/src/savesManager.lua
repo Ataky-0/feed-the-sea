@@ -1,3 +1,4 @@
+-- savesManager.lua
 local json = require("src.lib.lunajson")
 
 local savesManager = {}
@@ -6,18 +7,19 @@ local indexFile = "index.json"
 local nextSaveOrder = 1
 local saveIndex = {} -- array de metadados
 
--- Helpers -----------------------------------------------------------------
-
+-- Garante que diretório de saves existe
 local function ensureSaveDir()
 	if not love.filesystem.getInfo(saveDir, "directory") then
 		love.filesystem.createDirectory(saveDir)
 	end
 end
 
+-- Obtém a data atual formatada
 local function getCurrentDate()
 	return os.date("%Y-%m-%d %H:%M:%S")
 end
 
+-- Carrega o arquivo de indexação (index.json)
 local function loadIndex()
 	ensureSaveDir()
 	if love.filesystem.getInfo(indexFile) then
@@ -33,11 +35,12 @@ local function loadIndex()
 	end
 end
 
+-- Salva o arquivo de indexação
 local function saveIndexFile()
 	love.filesystem.write(indexFile, json.encode(saveIndex))
 end
 
--- Estrutura padrão de save ------------------------------------------------
+-- Estrutura padrão de save
 local function defaultSave()
 	return {
 		oxygen = 5,
@@ -59,12 +62,12 @@ local function normalizeSave(save)
 	return save
 end
 
--- Operações ---------------------------------------------------------------
-
+-- Cria e retorna a estrutura padrão do save, para manter as chamadas de funções semânticas
 function savesManager.createSaveStruct()
 	return defaultSave()
 end
 
+-- Cria um novo save com o nome dado
 function savesManager.createSave(name)
 	loadIndex()
 
@@ -91,12 +94,14 @@ function savesManager.createSave(name)
 	return save, meta
 end
 
+-- Salva um save já existente
 function savesManager.saveGame(save, filename)
 	ensureSaveDir()
 	love.filesystem.write(saveDir .. filename, json.encode(save))
 	savesManager.updateLastPlayed(filename)
 end
 
+-- Carrega um save
 function savesManager.loadGame(filename)
 	if love.filesystem.getInfo(saveDir .. filename) then
 		local contents = love.filesystem.read(saveDir .. filename)
@@ -107,12 +112,14 @@ function savesManager.loadGame(filename)
 	end
 end
 
+-- Lista os saves existentes
 function savesManager.listSaves()
 	loadIndex()
 	table.sort(saveIndex, function(a, b) return a.order < b.order end)
 	return saveIndex
 end
 
+-- Atualiza a data de último acesso do save
 function savesManager.updateLastPlayed(filename)
 	loadIndex()
 	for _, entry in ipairs(saveIndex) do
@@ -124,6 +131,7 @@ function savesManager.updateLastPlayed(filename)
 	end
 end
 
+-- Apaga um save
 function savesManager.deleteSave(filename)
 	loadIndex()
 	if love.filesystem.getInfo(saveDir .. filename) then

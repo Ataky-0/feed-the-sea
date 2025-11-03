@@ -1,3 +1,4 @@
+-- sceneManager.lua
 -- Tudo que ocorre na main que será usado nas cenas
 -- tem que ser replicado, esta relação é facilmente
 -- observada ao comparar a main.lua com o src/sceneManager.lua.

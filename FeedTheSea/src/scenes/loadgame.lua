@@ -1,3 +1,4 @@
+-- loadgame.lua
 local UI = require("src.ui")
 local sceneManager = require("src.sceneManager")
 local savesManager = require("src.savesManager")
@@ -37,11 +38,12 @@ function loadgame:load()
 	self:updatePagination()
 end
 
+-- Dinamicamente calcula o total de páginas
 function loadgame:updatePagination()
 	self.totalPages = math.max(1, math.ceil(#self.saves / self.perPage))
 end
 
--- abre uma janela de confirmação para deletar 'save'
+-- Abre uma janela de confirmação para deletar 'save'
 function loadgame:openConfirm(save)
 	-- não abrir outra se já existir
 	if self.confirmDialog then return end
@@ -86,6 +88,7 @@ function loadgame:openConfirm(save)
 	self.confirmDialog = msg
 end
 
+-- Atualizar posições dos botões (para o caso da janela ser redimensionada)
 function loadgame:updateConfirmPositions()
 	if not self.confirmDialog then return end
 	local msg = self.confirmDialog
@@ -156,7 +159,6 @@ function loadgame:draw()
 
 	-- Se houver diálogo de confirmação, desenhar por cima
 	if self.confirmDialog then
-		-- atualizar posições dos botões caso a janela tenha sido redimensionada
 		self:updateConfirmPositions()
 		UI.drawMessage(self.confirmDialog)
 		UI.drawButton(self.confirmDialog._yesBtn, self.smallFont)
@@ -164,6 +166,7 @@ function loadgame:draw()
 	end
 end
 
+-- Desenhar caixa de save (unidade)
 function loadgame:drawSaveCard(save, x, y, w, h)
 	-- Fundo do card
 	love.graphics.setColor(0.1, 0.3, 0.6)

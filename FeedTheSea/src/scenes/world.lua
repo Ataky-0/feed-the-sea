@@ -3,9 +3,10 @@ local UI = require("src.ui")
 local sceneManager = require("src.sceneManager")
 local savesManager = require("src.savesManager")
 local entitiesManager = require("src.entitiesManager")
+
 local world = {}
 
--- Adicionando tabela para armazenar os peixes no mundo
+-- Tabelas para armazenar os peixes no mundo
 world.fishList = {}
 world.plantList = {}
 world.shoalList = {}
@@ -18,9 +19,11 @@ function world:load(saveMeta)
 		error("Erro: save não pôde ser carregado.")
 	end
 
+	-- Variáveis usadas pelo acréscimo temporizado de Biomassa
 	self.fishBiomassTimer = 0
 	self.fishBiomassInterval = 10
 
+	-- Imagem de fundo
 	self.background = love.graphics.newImage("assets/background.png")
 	self.backgroundW, self.backgroundH = self.background:getDimensions()
 
@@ -30,6 +33,7 @@ function world:load(saveMeta)
 	self.topBarHeight = 80
 	local ww, wh = love.graphics.getDimensions()
 
+	-- Invocar peixes e plantas do save
 	for id, qty in pairs(self.saveData.fish or {}) do
 		local ent = assert(entitiesManager.getFishById(id), "Peixe inexistente.") -- assume que existe
 		for _ = 1, qty do
@@ -152,6 +156,7 @@ function world:load(saveMeta)
 	}
 end
 
+-- Descarregar mundo e salvar mudanças no save 
 function world:unload()
 	-- fechar janela de spawn
 	if self.spawnWindow then
@@ -207,6 +212,7 @@ function world:loadEntitiesForTab(tabIndex)
 	end
 end
 
+-- Função para verificar e também deduzir/acrescentar recursos por entidade
 function world:canAffordAndConsume(entity)
 	local data = assert(self.saveData, "Save data não carregado.")
 
@@ -281,12 +287,14 @@ function world:canAffordAndConsume(entity)
 	return true
 end
 
+-- Função auxiliar para garantir um valor randomizado com propriedade (intensidade)
 local function biasedRandom(min, max, power)
 	power = power or 2
 	local t = math.random() ^ power
 	return min + (max - min) * t
 end
 
+-- Função para retornar se uma posição está muito próxima de outras
 local function isTooClose(x, y, list, minDist)
 	for _, p in ipairs(list) do
 		local dx, dy = p.x - x, p.y - y
@@ -297,6 +305,7 @@ local function isTooClose(x, y, list, minDist)
 	return false
 end
 
+-- Função para invocar uma planta no mundo
 function world:spawnPlant(entity)
 	local ww, wh   = love.graphics.getDimensions()
 	local groundY  = wh * 0.80
@@ -337,7 +346,7 @@ function world:spawnPlant(entity)
 	table.insert(self.plantList, plant)
 end
 
--- Função para invocar (por enquanto) um peixe no mundo
+-- Função para invocar um peixe no mundo
 function world:spawnFish(entity)
 	local ww, wh = love.graphics.getDimensions()
 	local fish = {
@@ -406,6 +415,7 @@ function world:updateFishAnimations(dt)
 	end
 end
 
+-- Função para desenhar as plantas
 function world:drawPlants()
 	for _, plant in ipairs(self.plantList) do
 		love.graphics.setColor(1, 1, 1, 1)
@@ -461,7 +471,7 @@ function world:drawFish()
 	end
 end
 
--- Função para desenhar a janela de spawn
+-- Função para desenhar a janela de spawn de entidades
 function world:drawSpawnWindow()
 	if not self.spawnWindow.visible then return end
 

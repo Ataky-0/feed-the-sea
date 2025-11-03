@@ -3,6 +3,7 @@ local json = require("src.lib.lunajson")
 
 local entitiesManager = {}
 
+-- Obtém os dados de um peixe pelo seu ID
 function entitiesManager.getFishById(id)
     local entities = assert(entitiesManager.loadEntities(), "Erro ao obter entidades")
     local fish = entities.fish and entities.fish[id]
@@ -13,6 +14,7 @@ function entitiesManager.getFishById(id)
     return nil
 end
 
+-- Obtém os dados de uma planta pelo seu ID
 function entitiesManager.getPlantById(id)
     local entities = assert(entitiesManager.loadEntities(), "Erro ao obter entidades")
     local plant = entities.plant and entities.plant[id]
@@ -23,6 +25,7 @@ function entitiesManager.getPlantById(id)
     return nil
 end
 
+-- Carrega o arquivo entities.json e retorna a tabela de dados
 function entitiesManager.loadEntities()
 	local fileContent = love.filesystem.read("data/entities.json")
 	if not fileContent then
@@ -33,6 +36,7 @@ function entitiesManager.loadEntities()
 	return data
 end
 
+-- Retorna a lista completa de peixes existentes
 function entitiesManager.getFishList()
 	local entities = assert(entitiesManager.loadEntities(), "Erro ao obter entidades")
 	local fishList = {}
@@ -46,6 +50,7 @@ function entitiesManager.getFishList()
 	return fishList
 end
 
+-- Retorna a lista completa de plantas existentes
 function entitiesManager.getPlantList()
 	local entities = assert(entitiesManager.loadEntities(), "Erro ao obter entidades")
 	local plantList = {}

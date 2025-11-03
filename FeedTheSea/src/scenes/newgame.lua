@@ -1,9 +1,9 @@
+-- newgame.lua
 local UI = require("src.ui")
 local sceneManager = require("src.sceneManager")
 local savesManager = require("src.savesManager")
 local timerManager = require("src.timerManager")
 
--- Define a cena
 local newgame = {}
 
 function newgame:load()
