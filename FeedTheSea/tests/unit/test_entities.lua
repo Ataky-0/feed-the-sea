@@ -76,5 +76,33 @@ function TestEntities:testLoadEntities()
 
 end
 
+-- obtenção de planta por ID
+function TestEntities:testGetFishById()
+    -- obtém peixe pelo ID
+    local fish = entities.getFishById("fish001")
+
+    -- verifica se os dados do peixe estão corretos
+    luaunit.assertIsTable(fish)
+    luaunit.assertEquals(fish.name, "Sardinha")
+    luaunit.assertEquals(fish.size, 0.5)
+
+    -- verifica retorno para ID inexistente
+    luaunit.assertIsNil(entities.getFishById("nonexistent_id"))
+end
+
+-- obtenção de planta por ID
+function TestEntities:testGetPlantById()
+    -- obtém planta pelo ID
+    local plant = entities.getPlantById("plant001")
+
+    -- verifica se os dados da planta estão corretos
+    luaunit.assertIsTable(plant)
+    luaunit.assertEquals(plant.name, "Alga")
+    luaunit.assertEquals(plant.size, 0.35)
+
+    -- verifica retorno para ID inexistente
+    luaunit.assertIsNil(entities.getPlantById("nonexistent_id"))
+end
+
 -- Roda os testes
 os.exit(luaunit.LuaUnit.run())
