@@ -212,7 +212,7 @@ function world:loadEntitiesForTab(tabIndex)
 	elseif tabIndex == 2 then        -- Aba "Plantas"
 		self.spawnWindow.entityList = entitiesManager.getPlantList()
 	elseif tabIndex == 3 then        -- Aba "Cardumes"
-		self.spawnWindow.entityList = {} -- Implementar quando necessário
+		self.spawnWindow.entityList = {} -- Implementar quando tiver
 	end
 end
 
@@ -528,7 +528,7 @@ function world:drawSpawnWindow()
 
 		if entity.diet and entity.nutrient_cost then
 			local dietLabel = "Dieta "
-			dietLabel = entity.diet == "herbivore" and dietLabel.."Herbívora" or dietLabel.."Carnívora"
+			dietLabel = entity.diet == "herbivore" and dietLabel.."herbívora" or dietLabel.."carnívora"
 			dietLabel = dietLabel.." consumida"
 			table.insert(stats, { label = dietLabel, value = -entity.nutrient_cost, color = dietColor })
 		elseif entity.nutrient_value then
