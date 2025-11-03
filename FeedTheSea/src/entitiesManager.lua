@@ -47,6 +47,10 @@ function entitiesManager.getFishList()
 		table.insert(fishList, fishData)
 	end
 
+	table.sort(fishList, function(a, b)
+		return a.id < b.id
+	end)
+
 	return fishList
 end
 
@@ -60,6 +64,10 @@ function entitiesManager.getPlantList()
 		plantData.id = plantId -- Adicionar o ID ao objeto
 		table.insert(plantList, plantData)
 	end
+
+	table.sort(plantList, function(a, b)
+		return a.id < b.id
+	end)
 
 	return plantList
 end

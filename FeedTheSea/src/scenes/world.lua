@@ -30,6 +30,7 @@ function world:load(saveMeta)
 	-- Fonts e layout
 	self.titleFont = love.graphics.newFont(32)
 	self.uiFont = love.graphics.newFont(18)
+	self.messageFont = love.graphics.newFont(24)
 	self.topBarHeight = 80
 	local ww, wh = love.graphics.getDimensions()
 
@@ -63,7 +64,7 @@ function world:load(saveMeta)
 		closeButton = nil,
 		tabs = { "Peixes", "Plantas", "Cardumes" },
 		currentTab = 1,
-		entityList = {}, -- Para armazenar as entidades carregadas
+		entityList = {},   -- Para armazenar as entidades carregadas
 		selectedEntity = nil -- Entidade selecionada para spawn
 	}
 
@@ -132,7 +133,7 @@ function world:load(saveMeta)
 					self:spawnPlant(ent) -- Plantas  ←  NEW
 				end
 			else
-				print("Recursos insuficientes para spawnar " .. ent.name)
+				self.canAffordFeedback = UI.newMessage("Recursos insuficientes para invocar " .. ent.name, self.messageFont)
 			end
 		end
 	)
@@ -156,7 +157,7 @@ function world:load(saveMeta)
 	}
 end
 
--- Descarregar mundo e salvar mudanças no save 
+-- Descarregar mundo e salvar mudanças no save
 function world:unload()
 	-- fechar janela de spawn
 	if self.spawnWindow then
@@ -198,16 +199,19 @@ function world:unload()
 	self.fishList = {}
 	self.plantList = {}
 	self.shoalList = {}
+
+	-- Limpar feedbacks (mensagens)
+	self.canAffordFeedback = nil
 end
 
 -- Função para carregar entidades de acordo com a aba selecionada
 function world:loadEntitiesForTab(tabIndex)
 	self.spawnWindow.currentTab = tabIndex
-	if tabIndex == 1 then          -- Aba "Peixes"
+	if tabIndex == 1 then            -- Aba "Peixes"
 		self.spawnWindow.entityList = entitiesManager.getFishList()
-	elseif tabIndex == 2 then      -- Aba "Plantas"
+	elseif tabIndex == 2 then        -- Aba "Plantas"
 		self.spawnWindow.entityList = entitiesManager.getPlantList()
-	elseif tabIndex == 3 then      -- Aba "Cardumes"
+	elseif tabIndex == 3 then        -- Aba "Cardumes"
 		self.spawnWindow.entityList = {} -- Implementar quando necessário
 	end
 end
@@ -501,37 +505,110 @@ function world:drawSpawnWindow()
 	-- Desenhar as entidades na lista
 	love.graphics.setColor(1, 1, 1)
 	local y_offset = self.spawnWindow.y + 100
-	for i, entity in ipairs(self.spawnWindow.entityList) do
-		-- Destacar entidade selecionada
-		if entity == self.spawnWindow.selectedEntity then
-			love.graphics.setColor(0.5, 0.8, 1.0)
-		else
-			love.graphics.setColor(1, 1, 1)
-		end
+	local lineSpacing = 5   -- espaço entre stats
+	local entitySpacing = 10 -- espaço extra entre entidades
 
-		local info = entity.name or entity.id
-		info = info .. " ( "
+	for i, entity in ipairs(self.spawnWindow.entityList) do
+		local x = self.spawnWindow.x + 20
+		local font = love.graphics.getFont()
+		local padding = 5
+
+		-- Preparar stats
+		local stats = {}
+		local oxColor = { 0.4, 0.7, 1.0 }
+		local dietColor = { 0.4, 1.0, 0.4 }
+		local bioColor = { 1.0, 0.8, 0.4 }
+		local nutrientColor = { 1.0, 1.0, 0.0 }
 
 		if entity.oxygen_cost then
-			info = info .. string.format("-O2: %.1f", entity.oxygen_cost)
+			table.insert(stats, { label = "Oxigênio consumido", value = -entity.oxygen_cost, color = oxColor })
 		elseif entity.oxygen_production then
-			info = info .. string.format("O2+: %.1f", entity.oxygen_production)
+			table.insert(stats, { label = "Oxigênio produzido", value = entity.oxygen_production, color = oxColor })
 		end
 
 		if entity.diet and entity.nutrient_cost then
-			local dietLabel = entity.diet == "herbivore" and "Herb" or "Carn"
-			info = info .. string.format(" | %s: %.1f", dietLabel, entity.nutrient_cost)
+			local dietLabel = "Dieta "
+			dietLabel = entity.diet == "herbivore" and dietLabel.."Herbívora" or dietLabel.."Carnívora"
+			dietLabel = dietLabel.." consumida"
+			table.insert(stats, { label = dietLabel, value = -entity.nutrient_cost, color = dietColor })
 		elseif entity.nutrient_value then
-			info = info .. string.format(" | Nutr: %.1f", entity.nutrient_value)
+			table.insert(stats, { label = "Nutrição gerada", value = entity.nutrient_value, color = nutrientColor })
 		end
 
 		if entity.biomass_cost then
-			info = info .. string.format(" | Bio: %.1f", entity.biomass_cost)
+			table.insert(stats, { label = "Biomassa consumida", value = -entity.biomass_cost, color = bioColor })
 		end
 
-		info = info .. " )"
+		-- Calcula altura total das stats
+		local statPadding = 4
+		local statSpacing = lineSpacing
+		local totalStatsHeight = 0
+		for _, stat in ipairs(stats) do
+			totalStatsHeight = totalStatsHeight + font:getHeight() + statPadding * 2 + statSpacing
+		end
+		if totalStatsHeight > 0 then totalStatsHeight = totalStatsHeight - statSpacing end
 
-		love.graphics.print(info, self.spawnWindow.x + 20, y_offset + (i - 1) * 25)
+		-- Altura da caixa do nome
+		local name = entity.name or entity.id
+		local nameHeight = font:getHeight() + padding * 2
+
+		-- Altura total do bloco
+		local blockHeight = math.max(nameHeight, totalStatsHeight)
+		local y = y_offset
+		local nameY = y + (blockHeight - nameHeight) / 2
+
+		-- Fundo alternado opcional
+		if i % 2 == 0 then
+			love.graphics.setColor(0, 0, 0, 0.15)
+		else
+			love.graphics.setColor(0, 0, 0, 0.05)
+		end
+		love.graphics.rectangle("fill", self.spawnWindow.x + 10, y, self.spawnWindow.w - 20, blockHeight, 8, 8)
+
+		-- Caixa do nome
+		local nameWidth = font:getWidth(name) + padding * 2
+		if entity == self.spawnWindow.selectedEntity then
+			love.graphics.setColor(0.5, 0.8, 1.0, 0.3)
+		else
+			love.graphics.setColor(0, 0, 0, 0.3)
+		end
+		love.graphics.rectangle("fill", x, nameY, nameWidth, nameHeight, 4, 4)
+
+		-- Nome
+		love.graphics.setColor(1, 1, 1)
+		love.graphics.print(name, x + padding, nameY + padding)
+
+		-- Desenha stats
+		local statX = x + nameWidth + 10
+		local statY = y
+		for _, stat in ipairs(stats) do
+			local statText = string.format("%s: %.1f", stat.label, stat.value)
+			local statWidth = font:getWidth(statText) + statPadding * 2
+			local statHeight = font:getHeight() + statPadding * 2
+
+			-- Caixa do stat
+			love.graphics.setColor(0, 0, 0, 0.3)
+			love.graphics.rectangle("fill", statX, statY, statWidth, statHeight, 3, 3)
+
+			-- Texto
+			love.graphics.setColor(stat.color)
+			love.graphics.print(statText, statX + statPadding, statY + statPadding)
+
+			-- Próximo stat embaixo
+			statY = statY + statHeight + statSpacing
+		end
+
+		-- Linha divisória entre entidades
+		if i < #self.spawnWindow.entityList then
+			local lineY = y_offset + blockHeight + entitySpacing / 2 - 1
+			love.graphics.setColor(1, 1, 1, 0.1)
+			love.graphics.rectangle("fill", self.spawnWindow.x + 10, lineY, self.spawnWindow.w - 20, 1)
+		end
+
+		-- Próxima entidade
+		y_offset = y_offset + blockHeight + entitySpacing
+
+		love.graphics.setColor(1, 1, 1)
 	end
 
 	-- Botão de spawn
@@ -606,7 +683,7 @@ function world:draw()
 	love.graphics.print(string.format("%s: %.1f", self.uiLabels.herb.label, self.saveData.food.herbivore), startX, y2)
 	love.graphics.setColor(self.uiLabels.carn.color)
 	love.graphics.print(string.format("%s: %.1f", self.uiLabels.carn.label, self.saveData.food.carnivore),
-	startX + spacing,
+		startX + spacing,
 		y2)
 
 	-- Desenhar plantas
@@ -624,6 +701,8 @@ function world:draw()
 	love.graphics.setFont(self.uiFont)
 	love.graphics.setColor(1, 1, 1, 0.6)
 	love.graphics.print(self.saveMeta.name, 20, wh - 40)
+
+	if self.canAffordFeedback then UI.drawMessage(self.canAffordFeedback) end
 end
 
 function world:mousemoved(x, y)
@@ -644,6 +723,10 @@ function world:mousepressed(x, y, button)
 	UI.clickButton(self.backButton, button)
 	UI.clickButton(self.spawnButton, button)
 
+	if self.canAffordFeedback then
+		UI.clickMessage(self.canAffordFeedback, x, y)
+	end
+
 	if self.spawnWindow.visible then
 		UI.clickButton(self.spawnWindow.closeButton, button)
 		UI.clickButton(self.spawnWindow.spawnEntityButton, button)
@@ -651,15 +734,37 @@ function world:mousepressed(x, y, button)
 		-- Verificar clique em entidades da lista
 		if button == 1 then
 			local y_offset = self.spawnWindow.y + 100
-			for i, entity in ipairs(self.spawnWindow.entityList) do
-				local entityY = y_offset + (i - 1) * 25
-				if x >= self.spawnWindow.x + 20 and x <= self.spawnWindow.x + 200 and
-					y >= entityY and y <= entityY + 20 then
+			local entitySpacing = 10
+			local font = love.graphics.getFont()
+			local padding = 5
+			local lineSpacing = 5
+			local statPadding = 4
+
+			for _, entity in ipairs(self.spawnWindow.entityList) do
+				-- Conta quantos stats existem pra calcular altura aproximada
+				local statCount = 0
+				if entity.oxygen_cost or entity.oxygen_production then statCount = statCount + 1 end
+				if entity.diet and entity.nutrient_cost or entity.nutrient_value then statCount = statCount + 1 end
+				if entity.biomass_cost then statCount = statCount + 1 end
+
+				local totalStatsHeight = statCount * (font:getHeight() + statPadding * 2 + lineSpacing)
+				if statCount > 0 then totalStatsHeight = totalStatsHeight - lineSpacing end
+
+				local nameHeight = font:getHeight() + padding * 2
+				local blockHeight = math.max(nameHeight, totalStatsHeight)
+				local blockX = self.spawnWindow.x + 10
+				local blockY = y_offset
+				local blockW = self.spawnWindow.w - 20
+
+				if x >= blockX and x <= blockX + blockW and y >= blockY and y <= blockY + blockHeight then
 					self.spawnWindow.selectedEntity = entity
 					break
 				end
+
+				y_offset = y_offset + blockHeight + entitySpacing
 			end
 		end
+
 
 		for _, tabBtn in ipairs(self.spawnWindow.tabButtons) do
 			UI.clickButton(tabBtn, button)
