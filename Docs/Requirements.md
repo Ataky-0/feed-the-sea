@@ -9,13 +9,13 @@ Esta seção descreve os requisitos funcionais que o jogo Feed The Sea deve ofer
 | RF |  #1   |
 | --- | --- |
 | Nome: |   Gerenciar a Vida Marinha  |
-| Descrição: |   O jogador pode gerenciar a vida marinha do seu ambiente, possibilitando introduzir formas de vida (animais, plantas e algas) e incluir formas de gerar os recursos necessários para o gerenciamento.   |
+| Descrição: |   O jogador pode gerenciar a vida marinha do seu ambiente, possibilitando introduzir formas de vida (animais, plantas e algas) e incluir formas de gerar os recursos necessários para o gerenciamento. Cada ser vivo contribui com uma certa quantidade de recursos e, ao mesmo tempo, exige recursos específicos para ser adicionado ao ecossistema.   |
 | Atores: |  Jogador   |
 | Prioridade: |   Essencial  |
-| Entradas e pré-condições: |     |
-| Saídas e pós-condições: |     |
-| Fluxo principal: |     |
-| Fluxo secundário 1: |     |
+| Entradas e pré-condições: |  O jogador deve ter um ambiente carregado e possuir recursos suficientes para realizar a ação.   |
+| Saídas e pós-condições: |  O Ser Vivo é adicionado ao ambiente e gera recursos.   |
+| Fluxo principal: |   O jogador cria e carrega um ambiente. Em seguida, ao clicar no botão de adicionar seres, seleciona um deles e o insere no ambiente (spawn), desde que possua recursos suficientes.  |
+| Fluxo secundário 1: |   O jogador carrega um ambiente. Em seguida, ao clicar no botão de adicionar seres, seleciona um deles e o insere no ambiente (spawn), desde que possua recursos suficientes.  |
 
 | RF |  #2   |
 | --- | --- |
@@ -53,24 +53,22 @@ Esta seção descreve os requisitos funcionais que o jogo Feed The Sea deve ofer
 | RF |  #5   |
 | --- | --- |
 | Nome: |   Disponibilidade de Recursos  |
-| Descrição: |   O jogo disponibiliza os recursos essenciais (oxigênio e alimento) para que o jogador gerencie os seres do seu ambiente. Quanto mais recursos o jogador tiver, mais ele pode expandir seu ambiente e adicionar novas formas de vida.   |
+| Descrição: |   O jogo disponibiliza os recursos essenciais (oxigênio, alimento animal, alimento vegeral e biomassa) para que o jogador gerencie os seres do seu ambiente. Quanto mais recursos o jogador tiver, mais ele pode expandir seu ambiente e adicionar novas formas de vida.   |
 | Atores: |  Jogador, Sistema do Jogo   |
 | Prioridade: |   Essencial  |
-| Entradas e pré-condições: |     |
-| Saídas e pós-condições: |     |
-| Fluxo principal: |     |
-| Fluxo secundário 1: |     |
+| Entradas e pré-condições: |  O jogador deve ter um ambiente carregado.   |
+| Saídas e pós-condições: |  Os recursos são exibidos na interface do jogo.    |
+| Fluxo principal: |  O jogador precisa ter um ambiente carregado. Ao carregar o ambiente os rescursos são exibidos na interface.   |
 
 | RF |  #6   |
 | --- | --- |
 | Nome: |   Geração de Recursos  |
-| Descrição: |   O jogo deve disponibilizar mecanismos de geração dos recursos essenciais do ecossistema: oxigênio e alimento. O oxigênio é produzido por algas e outras plantas aquáticas, enquanto o alimento é disponibilizado por diferentes fontes, como plantas e cardumes de peixes.   |
+| Descrição: |   O jogo deve disponibilizar mecanismos de geração dos recursos essenciais do ecossistema: oxigênio, alimento animal, alimento vegetal e biomassa. O oxigênio é produzido por algas e outras plantas aquáticas, enquanto o alimento é disponibilizado por diferentes fontes, como plantas e cardumes de peixes e a biomassa é produzido por vegetação e peixes.   |
 | Atores: |  Jogador, Sistema do Jogo   |
 | Prioridade: |   Essencial  |
-| Entradas e pré-condições: |     |
-| Saídas e pós-condições: |     |
-| Fluxo principal: |     |
-| Fluxo secundário 1: |     |
+| Entradas e pré-condições: |   Haver algum Ser Vivo que produza o recurso correspondente.  |
+| Saídas e pós-condições: |  O recurso é produzido continuamento a cada 10 segundos enquanto o Ser Vivo estiver presente no ambiente.  |
+| Fluxo principal: |   O jogador precisa ter um ambiente carregado. Ao carregar o ambiente, deve ser adicionado algum Ser Vivo no ambiente. Com isso, o recurso correspondente será gerado.  |
 
 | RF |  #7   |
 | --- | --- |
