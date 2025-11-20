@@ -1,12 +1,42 @@
 -- ui.lua
 local utf8 = require("utf8")
 
+local sceneManager = require("src.sceneManager")
+
 local UI = {}
+
+UI.UI_BASE_W = 1280
+UI.UI_BASE_H = 720
 -- Funções locais para auxílio
 
 local function updateInputText(input, newText)
 	input.text = newText
 	input.textObject:set(input.text)
+end
+
+-- Função para obter dimensões ao longo de todo o jogo
+function UI.getDimensions()
+	return UI.UI_BASE_W, UI.UI_BASE_H
+end
+
+-- Função para alterar resolução
+function UI.setDimensions(newW, newH)
+	UI.UI_BASE_W, UI.UI_BASE_H = newW, newH
+	sceneManager:reloadScene()
+end
+
+-- Função para obter escala atual da UI baseada em resolução
+function UI.getScale()
+	local ww, wh = love.graphics.getDimensions()
+	local sx = ww / UI.UI_BASE_W
+	local sy = wh / UI.UI_BASE_H
+	return sx, sy
+end
+
+-- Função para escalar coordenadas do mouse
+function UI.scaleMouse(x, y)
+    local sx, sy = UI.getScale()
+    return x / sx, y / sy
 end
 
 -- Função para criar um input de texto
@@ -47,7 +77,7 @@ end
 
 -- Função para criar mensagem clicável
 function UI.newMessage(text, font)
-	local ww, wh = love.graphics.getDimensions()
+	local ww, wh = UI.getDimensions()
 	local message = {
 		text = text or "",
 		x = ww / 2,
