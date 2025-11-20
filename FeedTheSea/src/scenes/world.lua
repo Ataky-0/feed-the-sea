@@ -1,17 +1,29 @@
 -- world.lua
-local UI = require("src.ui")
-local sceneManager = require("src.sceneManager")
-local savesManager = require("src.savesManager")
-local entitiesManager = require("src.entitiesManager")
+local UI               = require("src.ui")
+local sceneManager     = require("src.sceneManager")
+local savesManager     = require("src.savesManager")
+local entitiesManager  = require("src.entitiesManager")
 
-local world = {}
+local world            = {}
+
+local ww, wh           = UI.getDimensions()
 
 -- Tabelas para armazenar os peixes no mundo
-world.fishList = {}
-world.plantList = {}
-world.shoalList = {}
+world.fishList         = {}
+world.plantList        = {}
+world.shoalList        = {}
+
+world.draggedPlant     = nil
+world.dragPlantOffsetX = 0
+world.dragPlantOffsetY = 0
+
+local function round3(v)                  -- Esta função auxiliar irá arredondar as porcentagens para termos alta precisão
+	return math.floor(v * 1000 + 0.5) / 1000 -- 0.5 para arredondar corretamente
+end
 
 function world:load(saveMeta)
+	-- Renova dimensões
+	ww, wh = UI.getDimensions()
 	-- Carrega o conteúdo do save
 	self.saveMeta = saveMeta
 	self.saveData = savesManager.loadGame(saveMeta.file)
@@ -28,11 +40,10 @@ function world:load(saveMeta)
 	self.backgroundW, self.backgroundH = self.background:getDimensions()
 
 	-- Fonts e layout
-	self.titleFont = love.graphics.newFont(32)
-	self.uiFont = love.graphics.newFont(18)
-	self.messageFont = love.graphics.newFont(24)
+	self.titleFont = love.graphics.newFont("assets/fonts/DejaVuSans.ttf", 32)
+	self.uiFont = love.graphics.newFont("assets/fonts/DejaVuSans.ttf", 18)
+	self.messageFont = love.graphics.newFont("assets/fonts/DejaVuSans.ttf", 24)
 	self.topBarHeight = 80
-	local ww, wh = love.graphics.getDimensions()
 
 	-- Invocar peixes e plantas do save
 	for id, qty in pairs(self.saveData.fish or {}) do
@@ -45,11 +56,22 @@ function world:load(saveMeta)
 	for _, plant in ipairs(self.saveData.producers or {}) do
 		local ent = entitiesManager.getPlantById(plant.id)
 		if ent then
-			self:spawnPlant(ent)
-			local planted = self.plantList[#self.plantList]
-			planted.x = plant.x
-			planted.y = plant.y
-			planted.size = plant.size
+			self:spawnPlant(ent)                        -- cria a planta com coordenadas “aleatórias” temporárias
+			local p = self.plantList[#self.plantList]   -- última inserida
+			-- recalcula a posição real a partir dos percentuais salvos
+			if plant.normX and plant.normY then
+				p.normX = plant.normX
+				p.normY = plant.normY
+				p.x = round3(p.normX * ww)
+				p.y = round3(p.normY * wh)
+			else
+				-- fallback para saves antigos que ainda tenham x/y
+				-- TODO: Remover após primeira release 👍👍👍
+				p.x = plant.x or p.x
+				p.y = plant.y or p.y
+				p.normX = round3(p.x / ww)
+				p.normY = round3(p.y / wh)
+			end
 		end
 	end
 
@@ -117,7 +139,7 @@ function world:load(saveMeta)
 
 	-- Botão para spawnar entidade
 	self.spawnWindow.spawnEntityButton = UI.newButton(
-		"Spawnar",
+		"Invocar",
 		self.spawnWindow.x + self.spawnWindow.w / 2 - 50,
 		self.spawnWindow.y + self.spawnWindow.h - 50,
 		100,
@@ -141,7 +163,7 @@ function world:load(saveMeta)
 
 	-- Botão para sair/voltar
 	self.backButton = UI.newButton(
-		"Menu",
+		"Voltar",
 		ww - 120, 20, 100, 40,
 		function()
 			sceneManager:changeScene("mainmenu")
@@ -150,10 +172,10 @@ function world:load(saveMeta)
 
 	-- Mensagens de UI
 	self.uiLabels = {
-		oxygen = { label = "Oxi", color = { 0.5, 0.8, 1.0 } },
-		biomass = { label = "Bio", color = { 0.9, 0.9, 0.3 } },
-		herb = { label = "Herb", color = { 0.4, 1.0, 0.4 } },
-		carn = { label = "Carn", color = { 1.0, 0.4, 0.4 } },
+		oxygen = { label = "Oxigênio", color = { 0.5, 0.8, 1.0 } },
+		biomass = { label = "Biomassa", color = { 0.9, 0.9, 0.3 } },
+		herb = { label = "Dieta Herb.", color = { 0.4, 1.0, 0.4 } },
+		carn = { label = "Dieta Carn.", color = { 1.0, 0.4, 0.4 } },
 	}
 end
 
@@ -178,10 +200,11 @@ function world:unload()
 		local prod = {}
 		for _, p in ipairs(self.plantList) do
 			table.insert(prod, {
-				id   = p.id,
-				x    = p.x,
-				y    = p.y,
-				size = p.size
+				id    = p.id,
+				-- grava os percentuais já arredondados (já estão em 3 decimais)
+				normX = p.normX,
+				normY = p.normY,
+				size  = p.size
 			})
 		end
 		self.saveData.producers = prod
@@ -311,7 +334,6 @@ end
 
 -- Função para invocar uma planta no mundo
 function world:spawnPlant(entity)
-	local ww, wh   = love.graphics.getDimensions()
 	local groundY  = wh * 0.80
 	local minY     = groundY - 20
 	local maxY     = groundY + 90
@@ -328,9 +350,16 @@ function world:spawnPlant(entity)
 
 	local entityWidth, entityHeight = entity.w, entity.h
 
+	local normX = round3(x / ww) -- 0.000 – 1.000
+	local normY = round3(y / wh)
+
 	local plant = {
 		id     = entity.id,
 		name   = entity.name,
+		-- guardamos os percentuais, ain ain
+		normX  = normX,
+		normY  = normY,
+		-- manter as coordenadas “reais” por conveniência, por enquanto..
 		x      = x,
 		y      = y,
 		size   = entity.size,
@@ -352,7 +381,6 @@ end
 
 -- Função para invocar um peixe no mundo
 function world:spawnFish(entity)
-	local ww, wh = love.graphics.getDimensions()
 	local fish = {
 		id = entity.id,
 		name = entity.name,
@@ -528,8 +556,8 @@ function world:drawSpawnWindow()
 
 		if entity.diet and entity.nutrient_cost then
 			local dietLabel = "Dieta "
-			dietLabel = entity.diet == "herbivore" and dietLabel.."herbívora" or dietLabel.."carnívora"
-			dietLabel = dietLabel.." consumida"
+			dietLabel = entity.diet == "herbivore" and dietLabel .. "herbívora" or dietLabel .. "carnívora"
+			dietLabel = dietLabel .. " consumida"
 			table.insert(stats, { label = dietLabel, value = -entity.nutrient_cost, color = dietColor })
 		elseif entity.nutrient_value then
 			table.insert(stats, { label = "Nutrição gerada", value = entity.nutrient_value, color = nutrientColor })
@@ -635,7 +663,6 @@ function world:update(dt)
 	end
 
 	-- Movimentação dos peixes
-	local ww, wh = love.graphics.getDimensions()
 	for _, fish in ipairs(self.fishList) do
 		fish.x = fish.x + fish.velocityX * dt
 		fish.y = fish.y + fish.velocityY * dt
@@ -651,7 +678,10 @@ function world:update(dt)
 end
 
 function world:draw()
-	local ww, wh = love.graphics.getDimensions()
+	local sx, sy = UI.getScale()
+
+	love.graphics.push()
+	love.graphics.scale(sx, sy)
 
 	local backgroundScaleX = ww / self.backgroundW
 	local backgroundScaleY = wh / self.backgroundH
@@ -669,20 +699,20 @@ function world:draw()
 	local y1 = 15 -- primeira linha
 	local y2 = 40 -- segunda linha
 	local startX = 40
-	local spacing = 150
+	local spacing = 225
 
 	-- Linha 1: Oxigênio e Biomassa
 	love.graphics.setColor(self.uiLabels.oxygen.color)
-	love.graphics.print(string.format("%s: %.1f", self.uiLabels.oxygen.label, self.saveData.oxygen), startX, y1)
+	love.graphics.print(string.format("%s: %.2f mg O₂", self.uiLabels.oxygen.label, self.saveData.oxygen), startX, y1)
 	love.graphics.setColor(self.uiLabels.biomass.color)
-	love.graphics.print(string.format("%s: %.1f", self.uiLabels.biomass.label, self.saveData.biomass), startX + spacing,
+	love.graphics.print(string.format("%s: %.2f mg C", self.uiLabels.biomass.label, self.saveData.biomass), startX + spacing,
 		y1)
 
 	-- Linha 2: Herbívora e Carnívora
 	love.graphics.setColor(self.uiLabels.herb.color)
-	love.graphics.print(string.format("%s: %.1f", self.uiLabels.herb.label, self.saveData.food.herbivore), startX, y2)
+	love.graphics.print(string.format("%s: %.2f mg C", self.uiLabels.herb.label, self.saveData.food.herbivore), startX, y2)
 	love.graphics.setColor(self.uiLabels.carn.color)
-	love.graphics.print(string.format("%s: %.1f", self.uiLabels.carn.label, self.saveData.food.carnivore),
+	love.graphics.print(string.format("%s: %.2f mg C", self.uiLabels.carn.label, self.saveData.food.carnivore),
 		startX + spacing,
 		y2)
 
@@ -703,11 +733,20 @@ function world:draw()
 	love.graphics.print(self.saveMeta.name, 20, wh - 40)
 
 	if self.canAffordFeedback then UI.drawMessage(self.canAffordFeedback) end
+
+	love.graphics.pop()
 end
 
 function world:mousemoved(x, y)
+	x, y = UI.scaleMouse(x, y)
+
 	UI.updateButtonHover(self.backButton, x, y)
 	UI.updateButtonHover(self.spawnButton, x, y)
+
+	if self.draggedPlant then
+		self.draggedPlant.x = x - self.dragPlantOffsetX
+		self.draggedPlant.y = y - self.dragPlantOffsetY
+	end
 
 	if self.spawnWindow.visible then
 		UI.updateButtonHover(self.spawnWindow.closeButton, x, y)
@@ -720,8 +759,21 @@ function world:mousemoved(x, y)
 end
 
 function world:mousepressed(x, y, button)
+	x, y = UI.scaleMouse(x, y)
 	UI.clickButton(self.backButton, button)
 	UI.clickButton(self.spawnButton, button)
+
+	if button == 1 and not self.spawnWindow.visible then
+		for _, plant in ipairs(self.plantList) do
+			local radius = plant.size * 0.5 * math.max(plant.width, plant.height) -- aproximação do “hit‑box”
+			if (x - plant.x) ^ 2 + (y - plant.y) ^ 2 <= radius ^ 2 then
+				self.draggedPlant = plant
+				self.dragPlantOffsetX = x - plant.x
+				self.dragPlantOffsetY = y - plant.y
+				break
+			end
+		end
+	end
 
 	if self.canAffordFeedback then
 		UI.clickMessage(self.canAffordFeedback, x, y)
@@ -768,6 +820,16 @@ function world:mousepressed(x, y, button)
 
 		for _, tabBtn in ipairs(self.spawnWindow.tabButtons) do
 			UI.clickButton(tabBtn, button)
+		end
+	end
+end
+
+function world:mousereleased(x, y, button)
+	if button == 1 then
+		if self.draggedPlant then
+			self.draggedPlant.normX = round3(self.draggedPlant.x / ww)
+			self.draggedPlant.normY = round3(self.draggedPlant.y / wh)
+			self.draggedPlant = nil
 		end
 	end
 end

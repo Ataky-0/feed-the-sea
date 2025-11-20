@@ -6,7 +6,12 @@ local timerManager = require("src.timerManager")
 
 local newgame = {}
 
+local ww, wh = UI.getDimensions()
+
 function newgame:load()
+	-- Renova dimensões
+	ww, wh = UI.getDimensions()
+
 	self.backButton = UI.newButton("<", 10, 10, 60, 50, function()
 		sceneManager:changeScene("mainmenu")
 	end)
@@ -17,7 +22,6 @@ function newgame:load()
 	self.inputFont = love.graphics.newFont(18)
 	self.messageFont = love.graphics.newFont(24)
 
-	local ww, wh = love.graphics.getDimensions()
 	local inputWidth, inputHeight = 300, 40
 	local spacing = 15
 
@@ -70,10 +74,17 @@ function newgame:load()
 	)
 end
 
+function newgame:unload()
+	newgame = nil
+end
+
 function newgame:draw()
-	local ww, wh = love.graphics.getDimensions()
+	local sx, sy = UI.getScale()
 
 	love.graphics.clear(0 / 255, 30 / 255, 80 / 255)
+
+	love.graphics.push()
+	love.graphics.scale(sx, sy)
 
 	UI.drawText(self.title, 0, wh * 0.05, ww, "center", { 1, 1, 1 }, self.titleFont)
 
@@ -86,9 +97,13 @@ function newgame:draw()
 	UI.drawButton(self.backButton, self.navButtonsFont)
 	UI.drawButton(self.createButton, self.navButtonsFont)
 	if self.createdFeedback then UI.drawMessage(self.createdFeedback) end
+
+	love.graphics.pop()
 end
 
 function newgame:mousemoved(x, y)
+	x, y = UI.scaleMouse(x, y)
+
 	UI.updateButtonHover(self.backButton, x, y)
 	UI.updateButtonHover(self.createButton, x, y)
 
@@ -98,6 +113,8 @@ function newgame:mousemoved(x, y)
 end
 
 function newgame:mousepressed(x, y, button)
+	x, y = UI.scaleMouse(x, y)
+
 	UI.clickButton(self.backButton, button)
 	UI.clickButton(self.createButton, button)
 
