@@ -47,7 +47,8 @@ local function defaultSave()
 		food = { herbivore = 0, carnivore = 0 },
 		fish = {},
 		producers = {},
-		biomass = 10,
+		waste = {},
+		organic_matter = 10
 	}
 end
 

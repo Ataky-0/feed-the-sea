@@ -8,10 +8,11 @@ local world            = {}
 
 local ww, wh           = UI.getDimensions()
 
--- Tabelas para armazenar os peixes no mundo
+-- Tabelas para armazenar as entidades no mundo
 world.fishList         = {}
 world.plantList        = {}
 world.shoalList        = {}
+world.wasteList        = {}
 
 world.draggedPlant     = nil
 world.dragPlantOffsetX = 0
@@ -31,9 +32,27 @@ function world:load(saveMeta)
 		error("Erro: save não pôde ser carregado.")
 	end
 
-	-- Variáveis usadas pelo acréscimo temporizado de Biomassa
-	self.fishBiomassTimer = 0
-	self.fishBiomassInterval = 10
+	--#region Converter save
+	-- Esta seção tem como objetivo converter saves antigos para novos formatos (aliado ao savesManager.normalizeSave)
+	-- É temporário e não deve ser realizado fora do world.lua (mesmo que faça mais sentido estar em savesManager.lua)
+
+	-- Biomass -> Organic Matter
+	if self.saveData.biomass then
+		self.saveData.organic_matter = self.saveData.biomass
+		self.saveData.biomass = nil
+		print("Elemento de save convertido: biomass -> organic_matter")
+	end
+	--#endregion
+
+	-- Variáveis usadas pelo acréscimo temporizado de Matéria orgânica
+	self.fishOrganicMatterWasteImpact = 0.025
+	self.fishOrganicMatterMultiplier = 1.0
+	self.fishOrganicMatterTimer = 0
+	self.fishOrganicMatterInterval = 10 -- segundos
+
+	-- Variáveis usadas pelo evento temporizado de Lixo marítimo
+	self.wasteEventTimer = 0
+	self.wasteEventInterval = 90 -- 1 minuto e meio
 
 	-- Imagem de fundo
 	self.background = love.graphics.newImage("assets/background.png")
@@ -45,7 +64,7 @@ function world:load(saveMeta)
 	self.messageFont = love.graphics.newFont("assets/fonts/DejaVuSans.ttf", 24)
 	self.topBarHeight = 80
 
-	-- Invocar peixes e plantas do save
+	--#region Invocar peixes, plantas e lixos do save
 	for id, qty in pairs(self.saveData.fish or {}) do
 		local ent = assert(entitiesManager.getFishById(id), "Peixe inexistente.") -- assume que existe
 		for _ = 1, qty do
@@ -56,8 +75,8 @@ function world:load(saveMeta)
 	for _, plant in ipairs(self.saveData.producers or {}) do
 		local ent = entitiesManager.getPlantById(plant.id)
 		if ent then
-			self:spawnPlant(ent)                        -- cria a planta com coordenadas “aleatórias” temporárias
-			local p = self.plantList[#self.plantList]   -- última inserida
+			self:spawnPlant(ent)                   -- cria a planta com coordenadas “aleatórias” temporárias
+			local p = self.plantList[#self.plantList] -- última inserida
 			-- recalcula a posição real a partir dos percentuais salvos
 			if plant.normX and plant.normY then
 				p.normX = plant.normX
@@ -74,6 +93,30 @@ function world:load(saveMeta)
 			end
 		end
 	end
+
+	for _, waste in ipairs(self.saveData.waste or {}) do
+		local ent = entitiesManager.getWasteById(waste.id)
+		if ent then
+			self:spawnWaste(ent)                   -- cria o lixo com coordenadas “aleatórias” temporárias
+			local w = self.wasteList[#self.wasteList] -- última inserida
+			-- recalcula a posição real a partir dos percentuais salvos
+			if waste.normX and waste.normY then
+				w.normX = waste.normX
+				w.normY = waste.normY
+				w.x = round3(w.normX * ww)
+				w.y = round3(w.normY * wh)
+				w.targetY = waste.targetY or w.y
+			else
+				-- fallback para saves antigos que ainda tenham x/y
+				-- TODO: Remover após primeira release 👍👍👍
+				w.x = waste.x or w.x
+				w.y = waste.y or w.y
+				w.normX = round3(w.x / ww)
+				w.normY = round3(w.y / wh)
+			end
+		end
+	end
+	--#endregion
 
 	--#region Janela de Entidades
 	-- Janela
@@ -173,7 +216,7 @@ function world:load(saveMeta)
 	-- Mensagens de UI
 	self.uiLabels = {
 		oxygen = { label = "Oxigênio", color = { 0.5, 0.8, 1.0 } },
-		biomass = { label = "Biomassa", color = { 0.9, 0.9, 0.3 } },
+		organic = { label = "Mat. Orgânica", color = { 0.9, 0.9, 0.3 } },
 		herb = { label = "Dieta Herb.", color = { 0.4, 1.0, 0.4 } },
 		carn = { label = "Dieta Carn.", color = { 1.0, 0.4, 0.4 } },
 	}
@@ -209,6 +252,20 @@ function world:unload()
 		end
 		self.saveData.producers = prod
 
+		--TODO lixos
+		local waste = {}
+		for _, w in ipairs(self.wasteList) do
+			table.insert(waste, {
+				id      = w.id,
+				-- grava os percentuais já arredondados (já estão em 3 decimais)
+				normX   = w.normX,
+				normY   = w.normY,
+				targetY = w.targetY,
+				size    = w.size
+			})
+		end
+		self.saveData.waste = waste
+
 		-- gravar no disco
 		local ok, err = pcall(function()
 			savesManager.saveGame(self.saveData, self.saveMeta.file)
@@ -222,6 +279,7 @@ function world:unload()
 	self.fishList = {}
 	self.plantList = {}
 	self.shoalList = {}
+	self.wasteList = {}
 
 	-- Limpar feedbacks (mensagens)
 	self.canAffordFeedback = nil
@@ -268,15 +326,15 @@ function world:canAffordAndConsume(entity)
 			data.food.carnivore = data.food.carnivore - entity.nutrient_cost
 		end
 
-		if entity.biomass_cost then
-			if data.biomass < entity.biomass_cost then return false end
-			data.biomass = data.biomass - entity.biomass_cost
+		if entity.organic_cost then
+			if data.organic_matter < entity.organic_cost then return false end
+			data.organic_matter = data.organic_matter - entity.organic_cost
 		end
 
 		return true
 	end
 
-	if entity.biomass_cost and data.biomass < entity.biomass_cost then
+	if entity.organic_cost and data.organic_matter < entity.organic_cost then
 		return false
 	end
 
@@ -293,7 +351,7 @@ function world:canAffordAndConsume(entity)
 	end
 
 	-- Consumo
-	if entity.biomass_cost then data.biomass = data.biomass - entity.biomass_cost end
+	if entity.organic_cost then data.organic_matter = data.organic_matter - entity.organic_cost end
 	if entity.oxygen_cost then data.oxygen = data.oxygen - entity.oxygen_cost end
 	if entity.diet and entity.nutrient_cost then
 		if entity.diet == "herbivore" then
@@ -395,7 +453,7 @@ function world:spawnFish(entity)
 		stateTimer = math.random(2, 5),
 		animation = { currentFrame = 1, timer = 0, frameDuration = 0.1 },
 		sprite = love.graphics.newImage("assets/sprites/" .. entity.sprite),
-		biomass_production = entity.biomass_production or 0,
+		organic_production = entity.organic_production or 0,
 		quads = {}
 	}
 
@@ -406,6 +464,53 @@ function world:spawnFish(entity)
 	end
 
 	table.insert(self.fishList, fish)
+end
+
+-- Função para invocar um lixo no mundo
+function world:spawnWaste(entity)
+	local groundY  = wh * 0.80
+	local minY     = groundY
+	local maxY     = groundY + 120
+
+	local x        = math.random(100, ww - 100)
+	local y        = biasedRandom(minY, maxY, 2)
+
+
+	local attempts = 0
+	while isTooClose(x, y, self.plantList, 50) and attempts < 10 do
+		x = math.random(100, ww - 100)
+		y = biasedRandom(minY, maxY, 2)
+		attempts = attempts + 1
+	end
+	
+	local targetY = y -- Posição no solo
+	y = y - wh -- Começar fora da tela
+
+	local normX = round3(x / ww) -- 0.000 – 1.000
+	local normY = round3(y / wh)
+
+	local waste = {
+		id = entity.id,
+		name = entity.name,
+		normX = normX,
+		normY = normY,
+		targetY = targetY,
+		x = x,
+		y = y,
+		width = 128,
+		height = 128,
+		size = entity.size,
+		currentTilt = 0,
+		sprite = love.graphics.newImage("assets/sprites/" .. entity.sprite),
+		quads = {}
+	}
+
+	for i = 1, 8 do
+		local quad = love.graphics.newQuad((i - 1) * 128, 0, 128, 128, waste.sprite:getDimensions())
+		table.insert(waste.quads, quad)
+	end
+
+	table.insert(self.wasteList, waste)
 end
 
 -- Função para atualizar animações dos peixes
@@ -503,6 +608,27 @@ function world:drawFish()
 	end
 end
 
+-- Função para desenhar os lixos
+function world:drawWaste()
+	for _, waste in ipairs(self.wasteList) do
+		love.graphics.setColor(1, 1, 1, 1)
+
+		love.graphics.push()
+		love.graphics.translate(waste.x, waste.y)
+		love.graphics.rotate(waste.currentTilt or 0)
+
+		love.graphics.draw(
+			waste.sprite,
+			0, 0,
+			0,
+			waste.size, waste.size,
+			waste.width / 2, waste.height / 2
+		)
+
+		love.graphics.pop()
+	end
+end
+
 -- Função para desenhar a janela de spawn de entidades
 function world:drawSpawnWindow()
 	if not self.spawnWindow.visible then return end
@@ -545,7 +671,7 @@ function world:drawSpawnWindow()
 		local stats = {}
 		local oxColor = { 0.4, 0.7, 1.0 }
 		local dietColor = { 0.4, 1.0, 0.4 }
-		local bioColor = { 1.0, 0.8, 0.4 }
+		local organicColor = { 1.0, 0.8, 0.4 }
 		local nutrientColor = { 1.0, 1.0, 0.0 }
 
 		if entity.oxygen_cost then
@@ -563,8 +689,8 @@ function world:drawSpawnWindow()
 			table.insert(stats, { label = "Nutrição gerada", value = entity.nutrient_value, color = nutrientColor })
 		end
 
-		if entity.biomass_cost then
-			table.insert(stats, { label = "Biomassa consumida", value = -entity.biomass_cost, color = bioColor })
+		if entity.organic_cost then
+			table.insert(stats, { label = "Massa orgânica consumida", value = -entity.organic_cost, color = organicColor })
 		end
 
 		-- Calcula altura total das stats
@@ -647,19 +773,39 @@ function world:update(dt)
 	-- Atualizar animações dos peixes
 	self:updateFishAnimations(dt)
 
-	-- Geração temporizada de biomassa pelos peixes
-	self.fishBiomassTimer = self.fishBiomassTimer + dt
+	-- Geração temporizada de massa orgânica pelos peixes
+	self.fishOrganicMatterTimer = self.fishOrganicMatterTimer + dt
+	self.fishOrganicMatterMultiplier = math.max(0, 1.0 - (#self.wasteList * self.fishOrganicMatterWasteImpact)) -- diminui 2.5% por lixo
 
-	if self.fishBiomassTimer >= self.fishBiomassInterval then
+	if self.fishOrganicMatterTimer >= self.fishOrganicMatterInterval then
 		local totalProd = 0
 
 		for _, fish in ipairs(self.fishList) do
-			totalProd = totalProd + fish.biomass_production
+			totalProd = totalProd + fish.organic_production
 		end
 
-		self.saveData.biomass = (self.saveData.biomass or 0) + totalProd
+		totalProd = totalProd * self.fishOrganicMatterMultiplier
 
-		self.fishBiomassTimer = 0
+		self.saveData.organic_matter = (self.saveData.organic_matter or 0) + totalProd
+
+		self.fishOrganicMatterTimer = 0
+	end
+
+	-- Evento temporizado de lixo marítimo
+	self.wasteEventTimer = self.wasteEventTimer + dt
+
+	if self.wasteEventTimer >= self.wasteEventInterval then
+		-- Invocar lixo em uma posição aleatória
+		local wasteEntities = entitiesManager.getWasteList()
+
+		if #wasteEntities > 0 then
+			for _ = 1, math.random(3, 6) do
+				local wasteEnt = wasteEntities[math.random(1, #wasteEntities)]
+				self:spawnWaste(wasteEnt)
+			end
+		end
+
+		self.wasteEventTimer = 0
 	end
 
 	-- Movimentação dos peixes
@@ -674,6 +820,37 @@ function world:update(dt)
 		if fish.y - (fish.height / 2) * fish.size < self.topBarHeight or fish.y + (fish.height / 2) * fish.size > wh then
 			fish.velocityY = -fish.velocityY
 		end
+	end
+
+	-- Movimentação dos lixos
+	for _, waste in ipairs(self.wasteList) do
+		-- Mover para baixo até a posição alvo
+		if waste.y < waste.targetY then
+			waste.y = waste.y + (60 * dt)
+			if waste.y >= waste.targetY then
+				waste.y = waste.targetY
+				waste.targetY = 0
+			end
+		end
+
+		-- Cálculo de tilt baseado na proximidade do alvo
+		local proximity = (waste.targetY - waste.y)
+
+		-- tilt baseado no movimento (suave)
+		local dynamicTilt = proximity * 0.03
+
+		-- só gera um tilt aleatório quando ATERRISSA pela primeira vez
+		if math.abs(proximity) < 5 and not waste.landedTilt then
+			waste.landedTilt = math.rad(math.random(-55, 55))
+		end
+
+		-- tilt final: se aterrissou, usa tilt fixo; senão usa dinâmico
+		local targetTilt = waste.landedTilt or dynamicTilt
+
+		-- suavização
+		waste.currentTilt = waste.currentTilt or targetTilt
+		local tiltSpeed = 3
+		waste.currentTilt = waste.currentTilt + (targetTilt - waste.currentTilt) * math.min(dt * tiltSpeed, 1)
 	end
 end
 
@@ -701,11 +878,14 @@ function world:draw()
 	local startX = 40
 	local spacing = 225
 
-	-- Linha 1: Oxigênio e Biomassa
+	-- Linha 1: Oxigênio e Matéria orgânica
 	love.graphics.setColor(self.uiLabels.oxygen.color)
 	love.graphics.print(string.format("%s: %.2f mg O₂", self.uiLabels.oxygen.label, self.saveData.oxygen), startX, y1)
-	love.graphics.setColor(self.uiLabels.biomass.color)
-	love.graphics.print(string.format("%s: %.2f mg C", self.uiLabels.biomass.label, self.saveData.biomass), startX + spacing,
+	love.graphics.setColor(self.uiLabels.organic.color)
+	love.graphics.print(
+	string.format("%s: %.2f mg C (x%.2f)", self.uiLabels.organic.label, self.saveData.organic_matter,
+			self.fishOrganicMatterMultiplier),
+		startX + spacing,
 		y1)
 
 	-- Linha 2: Herbívora e Carnívora
@@ -720,6 +900,8 @@ function world:draw()
 	self:drawPlants()
 	-- Desenhar peixes
 	self:drawFish()
+	-- Desenhar lixos
+	self:drawWaste()
 
 	-- Botão de saída
 	UI.drawButton(self.backButton, self.uiFont)
@@ -763,8 +945,29 @@ function world:mousepressed(x, y, button)
 	UI.clickButton(self.backButton, button)
 	UI.clickButton(self.spawnButton, button)
 
-	if button == 1 and not self.spawnWindow.visible then
+	if button == 1 and not self.spawnWindow.visib25le then
+		-- Verificar clique em lixo para limpar
+		for _, waste in ipairs(self.wasteList) do
+			-- Só pode limpar quando o lixo estiver no chão
+			if waste.targetY ~= 0 then break end
+			-- Hitbox apromixado
+			local radius = waste.size * 0.5 * math.max(waste.width, waste.height) -- aproximação do “hit‑box”
+			if (x - waste.x) ^ 2 + (y - waste.y) ^ 2 <= radius ^ 2 then
+				-- Remover da lista
+				for i, w in ipairs(self.wasteList) do
+					if w == waste then
+						table.remove(self.wasteList, i)
+						break
+					end
+				end
+				-- Apenas um lixo por clique (também evitando arrastar plantas próximas)
+				return
+			end
+		end
+
+		-- Verificar clique em plantas para arrastar
 		for _, plant in ipairs(self.plantList) do
+			-- Hitbox apromixado
 			local radius = plant.size * 0.5 * math.max(plant.width, plant.height) -- aproximação do “hit‑box”
 			if (x - plant.x) ^ 2 + (y - plant.y) ^ 2 <= radius ^ 2 then
 				self.draggedPlant = plant
@@ -797,7 +1000,7 @@ function world:mousepressed(x, y, button)
 				local statCount = 0
 				if entity.oxygen_cost or entity.oxygen_production then statCount = statCount + 1 end
 				if entity.diet and entity.nutrient_cost or entity.nutrient_value then statCount = statCount + 1 end
-				if entity.biomass_cost then statCount = statCount + 1 end
+				if entity.organic_cost then statCount = statCount + 1 end
 
 				local totalStatsHeight = statCount * (font:getHeight() + statPadding * 2 + lineSpacing)
 				if statCount > 0 then totalStatsHeight = totalStatsHeight - lineSpacing end

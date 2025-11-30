@@ -3,6 +3,17 @@ local json = require("src.lib.lunajson")
 
 local entitiesManager = {}
 
+-- Obtém os dados de um lixo pelo seu ID
+function entitiesManager.getWasteById(id)
+    local entities = assert(entitiesManager.loadEntities(), "Erro ao obter entidades")
+    local waste = entities.waste and entities.waste[id]
+    if waste then
+			waste.id = id
+			return waste
+    end
+    return nil
+end
+
 -- Obtém os dados de um peixe pelo seu ID
 function entitiesManager.getFishById(id)
     local entities = assert(entitiesManager.loadEntities(), "Erro ao obter entidades")
@@ -70,6 +81,20 @@ function entitiesManager.getPlantList()
 	end)
 
 	return plantList
+end
+
+-- Retorna a lista completa de lixos existentes
+function entitiesManager.getWasteList()
+	local entities = assert(entitiesManager.loadEntities(), "Erro ao obter entidades")
+	local wasteList = {}
+
+	-- Iterar sobre os lixos na estrutura existente
+	for wasteId, wasteData in pairs(entities.waste or {}) do
+		wasteData.id = wasteId -- Adicionar o ID ao objeto
+		table.insert(wasteList, wasteData)
+	end
+
+	return wasteList
 end
 
 return entitiesManager
