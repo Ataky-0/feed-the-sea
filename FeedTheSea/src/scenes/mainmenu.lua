@@ -22,7 +22,7 @@ function mainmenu:load()
 	local bx = (ww - bw) / 2
 	local by = wh * 0.4
 
-	local labels = { "Novo Jogo", "Carregar Jogo", "Opções" }
+	local labels = { "Novo Jogo", "Carregar Jogo", "Opções", "Sair" }
 	for i, text in ipairs(labels) do
 		local btn = UI.newButton(text, bx, by + (i - 1) * (bh + 15), bw, bh, function()
 			if text == "Opções" then
@@ -31,6 +31,8 @@ function mainmenu:load()
 				sceneManager:changeScene("newgame")
 			elseif text == "Carregar Jogo" then
 				sceneManager:changeScene("loadgame")
+			elseif text == "Sair" then
+				love.event.quit()
 			end
 		end)
 
