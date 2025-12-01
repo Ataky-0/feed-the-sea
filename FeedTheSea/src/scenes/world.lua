@@ -106,6 +106,7 @@ function world:load(saveMeta)
 				w.x = round3(w.normX * ww)
 				w.y = round3(w.normY * wh)
 				w.targetY = waste.targetY or w.y
+				w.removing = waste.removing or false
 			else
 				-- fallback para saves antigos que ainda tenham x/y
 				-- TODO: Remover após primeira release 👍👍👍
@@ -113,6 +114,8 @@ function world:load(saveMeta)
 				w.y = waste.y or w.y
 				w.normX = round3(w.x / ww)
 				w.normY = round3(w.y / wh)
+				w.targetY = waste.targetY or w.y
+				w.removing = waste.removing or false
 			end
 		end
 	end
@@ -252,16 +255,17 @@ function world:unload()
 		end
 		self.saveData.producers = prod
 
-		--TODO lixos
+		-- lixos
 		local waste = {}
 		for _, w in ipairs(self.wasteList) do
 			table.insert(waste, {
-				id      = w.id,
+				id       = w.id,
 				-- grava os percentuais já arredondados (já estão em 3 decimais)
-				normX   = w.normX,
-				normY   = w.normY,
-				targetY = w.targetY,
-				size    = w.size
+				normX    = w.normX,
+				normY    = w.normY,
+				targetY  = w.targetY,
+				removing = w.removing,
+				size     = w.size
 			})
 		end
 		self.saveData.waste = waste
@@ -468,12 +472,12 @@ end
 
 -- Função para invocar um lixo no mundo
 function world:spawnWaste(entity)
-	local groundY  = wh * 0.80
-	local minY     = groundY
-	local maxY     = groundY + 120
+	local groundY = wh * 0.80
+	local minY    = groundY
+	local maxY    = groundY + 120
 
-	local x        = math.random(100, ww - 100)
-	local y        = biasedRandom(minY, maxY, 2)
+	local x       = math.random(100, ww - 100)
+	local y       = biasedRandom(minY, maxY, 2)
 
 
 	local attempts = 0
@@ -482,9 +486,9 @@ function world:spawnWaste(entity)
 		y = biasedRandom(minY, maxY, 2)
 		attempts = attempts + 1
 	end
-	
-	local targetY = y -- Posição no solo
-	y = y - wh -- Começar fora da tela
+
+	local targetY = y           -- Posição no solo
+	y = y - wh                  -- Começar fora da tela
 
 	local normX = round3(x / ww) -- 0.000 – 1.000
 	local normY = round3(y / wh)
@@ -495,6 +499,7 @@ function world:spawnWaste(entity)
 		normX = normX,
 		normY = normY,
 		targetY = targetY,
+		removing = false,
 		x = x,
 		y = y,
 		width = 128,
@@ -626,6 +631,16 @@ function world:drawWaste()
 		)
 
 		love.graphics.pop()
+	end
+end
+
+-- Função para removar lixo
+function world:removeWaste(waste)
+	for i, w in ipairs(self.wasteList) do
+		if w == waste then
+			table.remove(self.wasteList, i)
+			return
+		end
 	end
 end
 
@@ -770,9 +785,6 @@ function world:drawSpawnWindow()
 end
 
 function world:update(dt)
-	-- Atualizar animações dos peixes
-	self:updateFishAnimations(dt)
-
 	-- Geração temporizada de massa orgânica pelos peixes
 	self.fishOrganicMatterTimer = self.fishOrganicMatterTimer + dt
 	self.fishOrganicMatterMultiplier = math.max(0, 1.0 - (#self.wasteList * self.fishOrganicMatterWasteImpact)) -- diminui 2.5% por lixo
@@ -789,6 +801,17 @@ function world:update(dt)
 		self.saveData.organic_matter = (self.saveData.organic_matter or 0) + totalProd
 
 		self.fishOrganicMatterTimer = 0
+	end
+
+	-- Atualizar fade-out da remoção de lixo
+	for i = #self.wasteList, 1, -1 do
+		local waste = self.wasteList[i]
+		if waste.removing then
+			waste.size = waste.size - 0.1
+			if waste.size <= 0 then
+				table.remove(self.wasteList, i)
+			end
+		end
 	end
 
 	-- Evento temporizado de lixo marítimo
@@ -831,6 +854,7 @@ function world:update(dt)
 				waste.y = waste.targetY
 				waste.targetY = 0
 			end
+			waste.normY = round3(waste.y / wh)
 		end
 
 		-- Cálculo de tilt baseado na proximidade do alvo
@@ -852,6 +876,9 @@ function world:update(dt)
 		local tiltSpeed = 3
 		waste.currentTilt = waste.currentTilt + (targetTilt - waste.currentTilt) * math.min(dt * tiltSpeed, 1)
 	end
+
+	-- Atualizar animações dos peixes
+	self:updateFishAnimations(dt)
 end
 
 function world:draw()
@@ -883,7 +910,7 @@ function world:draw()
 	love.graphics.print(string.format("%s: %.2f mg O₂", self.uiLabels.oxygen.label, self.saveData.oxygen), startX, y1)
 	love.graphics.setColor(self.uiLabels.organic.color)
 	love.graphics.print(
-	string.format("%s: %.2f mg C (x%.2f)", self.uiLabels.organic.label, self.saveData.organic_matter,
+		string.format("%s: %.2f mg C (x%.2f)", self.uiLabels.organic.label, self.saveData.organic_matter,
 			self.fishOrganicMatterMultiplier),
 		startX + spacing,
 		y1)
@@ -953,13 +980,8 @@ function world:mousepressed(x, y, button)
 			-- Hitbox apromixado
 			local radius = waste.size * 0.5 * math.max(waste.width, waste.height) -- aproximação do “hit‑box”
 			if (x - waste.x) ^ 2 + (y - waste.y) ^ 2 <= radius ^ 2 then
-				-- Remover da lista
-				for i, w in ipairs(self.wasteList) do
-					if w == waste then
-						table.remove(self.wasteList, i)
-						break
-					end
-				end
+				-- Adicionar qualidade de remoção ao lixo
+				waste.removing = true
 				-- Apenas um lixo por clique (também evitando arrastar plantas próximas)
 				return
 			end
