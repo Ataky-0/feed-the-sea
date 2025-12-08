@@ -35,11 +35,6 @@ function mainmenu:load()
 				love.event.quit()
 			end
 		end)
-
-		-- if i == 3 then -- Opções desabilitado por enquanto
-		-- 	btn.disabled = true
-		-- end
-
 		table.insert(self.buttons, btn)
 	end
 end

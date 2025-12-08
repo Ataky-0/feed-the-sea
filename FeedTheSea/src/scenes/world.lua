@@ -122,6 +122,14 @@ function world:load(saveMeta)
 	--#endregion
 
 	--#region Janela de Entidades
+	self.spawnWindowTooltipDictionary = {
+		oxygen_cost        = "Custa %.2f de Oxigênio para invocar esta entidade.",
+		nutrient_cost      = "Custa %.2f de Nutrientes para invocar esta entidade.",
+		organic_cost       = "Custa %.2f de Matéria Orgânica para invocar esta entidade.",
+		organic_production = "Esta entidade produz %.2f de Matéria Orgânica.",
+		oxygen_production  = "Esta entidade produz %.2f de Oxigênio.",
+		nutrient_value     = "Esta entidade produz %.2f de Nutrientes.",
+	}
 	-- Janela
 	self.spawnWindow = {
 		visible = false,
@@ -129,6 +137,8 @@ function world:load(saveMeta)
 		y = wh / 2 - 200,
 		w = 500,
 		h = 400,
+		scrollY = 0,
+		maxScroll = 0,
 		closeButton = nil,
 		tabs = { "Peixes", "Plantas", "Cardumes" },
 		currentTab = 1,
@@ -214,6 +224,13 @@ function world:load(saveMeta)
 		function()
 			sceneManager:changeScene("mainmenu")
 		end
+	)
+
+	-- Tooltip geral
+	self.tooltip = UI.newTooltip(
+		"",
+		self.uiFont,
+		250
 	)
 
 	-- Mensagens de UI
@@ -396,6 +413,10 @@ end
 
 -- Função para invocar uma planta no mundo
 function world:spawnPlant(entity)
+	if not self.saveData.unlocked_info[entity.id] then
+		self.saveData.unlocked_info[entity.id] = true
+	end
+
 	local groundY  = wh * 0.80
 	local minY     = groundY - 20
 	local maxY     = groundY + 90
@@ -443,6 +464,10 @@ end
 
 -- Função para invocar um peixe no mundo
 function world:spawnFish(entity)
+	if not self.saveData.unlocked_info[entity.id] then
+		self.saveData.unlocked_info[entity.id] = true
+	end
+
 	local fish = {
 		id = entity.id,
 		name = entity.name,
@@ -644,144 +669,354 @@ function world:removeWaste(waste)
 	end
 end
 
--- Função para desenhar a janela de spawn de entidades
+--#region SPAWN WINDOW (A função ficou muito grande, então dividi em várias regiões)
+--#region SPAWN WINDOW: Auxiliares
+
+function world:spawnWindow_drawBackground(x0, y0, w0, h0)
+	love.graphics.setColor(0.1, 0.1, 0.1, 0.95)
+	love.graphics.rectangle("fill", x0, y0, w0, h0, 12, 12)
+	love.graphics.setColor(1, 1, 1)
+	love.graphics.rectangle("line", x0, y0, w0, h0, 12, 12)
+end
+
+function world:spawnWindow_drawTabsAndButtons()
+	UI.drawButton(self.spawnWindow.closeButton, self.uiFont)
+	for _, tabBtn in ipairs(self.spawnWindow.tabButtons) do
+		UI.drawButton(tabBtn, self.uiFont)
+	end
+end
+
+function world:spawnWindow_drawBlock(block, drawX, drawY, innerPad, listW, font, isSelected)
+	-- largura útil para conteúdo
+	local contentW = listW - innerPad * 2
+
+	-- nome
+	love.graphics.setColor(0.7, 0.9, 1.0)
+	local nameText = block.entity.name or block.entity.id
+	love.graphics.print(nameText, drawX, drawY)
+	local textW = font:getWidth(nameText)
+	local textH = font:getHeight()
+
+	-- desenhar ícone (se existir)
+	local iconSize = 0
+	if block.entity.sprite then
+		block.entity.sprite_img = block.entity.sprite_img
+				or love.graphics.newImage("assets/sprites/" .. block.entity.sprite)
+
+		local sprite = block.entity.sprite_img
+		local sheetW, sheetH = sprite:getDimensions()
+		local frameW, frameH
+
+		if block.entity.w and block.entity.h then
+			frameW = block.entity.w
+			frameH = block.entity.h
+		elseif sheetH == 128 and sheetW > 128 then
+			frameW = 128
+			frameH = 128
+		else
+			frameW = sheetW
+			frameH = sheetH
+		end
+
+		local quad = love.graphics.newQuad(0, 0, frameW, frameH, sheetW, sheetH)
+
+		-- tamanho grande do ícone
+		iconSize = font:getHeight() * 3.0
+		local scale = iconSize / frameH
+
+		-- posição do ícone: à direita do texto
+		local iconX = drawX + textW + 6
+		local iconY = drawY + (textH / 2) - (frameH * scale / 2)
+
+		love.graphics.setColor(1, 1, 1)
+		love.graphics.draw(sprite, quad, iconX, iconY, 0, scale, scale)
+	end
+
+	-- altura reservada para topo (nome + ícone)
+	local topHeight = math.max(textH, iconSize)
+
+	-- BOTÃO DE INFORMAÇÕES (ℹ)
+	local infoSize = textH + 6
+	local infoX = drawX + contentW - infoSize -- extrema direita do bloco
+	local infoY = drawY + (topHeight / 2) - (infoSize)
+
+	local btn = UI.newButton("ℹ", infoX, infoY, infoSize, infoSize, function()
+		print("Info sobre:", block.entity.name or block.entity.id)
+	end)
+
+	if not self.saveData.unlocked_info[block.entity.id] then
+		btn.disabled = true
+		btn.hovered = false
+	end
+
+	-- Registra o botão (para hitbox/click)
+	table.insert(self.spawnWindow.infoButtons, {
+		button = btn,
+		x = infoX,
+		y = infoY,
+		w = infoSize,
+		h = infoSize,
+		entity = block.entity
+	})
+
+	UI.drawButton(btn, font)
+
+	-- descrição
+	local wrapped, lines = font:getWrap(block.desc, contentW)
+	local lineCount = type(lines) == "table" and #lines or lines or 1
+	local descH = lineCount * font:getHeight()
+
+	local descX = drawX
+	local descY = drawY + topHeight + 6
+	local descW = contentW
+
+	love.graphics.setColor(1, 1, 1)
+	love.graphics.printf(block.desc, descX, descY, descW, "left")
+
+	-- calcular altura total do bloco (para hitbox e espaçamento)
+	local bh = topHeight + 6 + descH + innerPad * 2
+
+	if isSelected then
+		love.graphics.setColor(0.3, 0.6, 1.0, 1)
+		love.graphics.setLineWidth(2)
+		love.graphics.rectangle("line", drawX - innerPad, drawY - innerPad / 2, listW, bh, 6, 6)
+		love.graphics.setLineWidth(1)
+	end
+
+	-- COLORIR NÚMEROS
+
+	local nums = {}
+	local function addNum(val, color, category)
+		if type(val) == "number" and color then
+			table.insert(nums, { string.format("%.2f", val), color, category })
+		end
+	end
+
+	local oxColor       = self.uiLabels.oxygen.color
+	local organicColor  = self.uiLabels.organic.color
+	local herbColor     = self.uiLabels.herb.color
+	local carnColor     = self.uiLabels.carn.color
+
+	local nutrientColor =
+			(block.entity.diet == "herbivore" or block.entity.diet == "herb") and herbColor
+			or (block.entity.diet == "carnivore" or block.entity.diet == "carn") and carnColor
+			or { 1, 1, 0 }
+
+	if block.entity.oxygen_cost then
+		addNum(block.entity.oxygen_cost, oxColor, "oxygen_cost")
+		addNum(block.entity.nutrient_cost, nutrientColor, "nutrient_cost")
+		addNum(block.entity.organic_production, organicColor, "organic_production")
+	elseif block.entity.oxygen_production then
+		addNum(block.entity.oxygen_production, oxColor, "oxygen_production")
+		addNum(block.entity.nutrient_value, nutrientColor, "nutrient_value")
+		addNum(block.entity.organic_cost, organicColor, "organic_cost")
+	end
+
+	local lineList = type(lines) == "table" and lines or wrapped
+	for lineIndex, lineText in ipairs(lineList) do
+		for _, pair in ipairs(nums) do
+			local numStr, color = pair[1], pair[2]
+			local s = string.find(lineText, numStr, 1, true)
+			if s then
+				local before = lineText:sub(1, s - 1)
+				local xOff = font:getWidth(before)
+				local yOff = (lineIndex - 1) * font:getHeight()
+
+				local px = descX + xOff
+				local py = descY + yOff
+
+				love.graphics.setColor(color)
+				love.graphics.print(numStr, descX + xOff, descY + yOff)
+
+				-- REGISTRA O HITBOX DO NÚMERO
+				table.insert(self.spawnWindow.coloredNumbers, {
+					x = px,
+					y = py,
+					w = font:getWidth(numStr),
+					h = font:getHeight(),
+					value = numStr,            -- valor
+					color = color,             -- cor do número (removível caso a gente acabe não usando)
+					category = pair[3] or "unknown" -- o mais importante (depois da hitbox)
+				})
+			end
+		end
+	end
+
+	return bh
+end
+
+function world:spawnWindow_computeBlocks(listW, innerPad, blockSpacing, font)
+	local contentHeight = 0
+	local blocks = {}
+
+	for _, entity in ipairs(self.spawnWindow.entityList) do
+		local desc = ""
+		if entity.oxygen_cost then
+			desc = string.format(entity.description or "",
+				entity.oxygen_cost,
+				entity.nutrient_cost or 0,
+				entity.organic_production or 0
+			)
+		elseif entity.oxygen_production then
+			desc = string.format(entity.description or "",
+				entity.oxygen_production,
+				entity.nutrient_value or 0,
+				entity.organic_cost or 0
+			)
+		end
+
+		local nameH = font:getHeight()
+
+		local iconSize = 0
+
+		if entity.sprite then
+			-- carregar imagem (lazy)
+			entity.sprite_img = entity.sprite_img
+					or love.graphics.newImage("assets/sprites/" .. entity.sprite)
+
+			local sprite = entity.sprite_img
+			local sheetW, sheetH = sprite:getDimensions()
+			local frameW, frameH
+
+			if entity.w and entity.h then
+				frameW = entity.w
+				frameH = entity.h
+			elseif sheetH == 128 and sheetW > 128 then
+				frameW = 128
+				frameH = 128
+			else
+				frameW = sheetW
+				frameH = sheetH
+			end
+
+			-- mesmo cálculo usado no draw:
+			iconSize = font:getHeight() * 3.0
+		end
+
+		local topHeight = math.max(nameH, iconSize)
+
+		local textW = listW - innerPad * 2
+		local a, b = font:getWrap(desc, textW)
+
+		local descLines
+		if type(b) == "number" then
+			descLines = b
+		elseif type(b) == "table" then
+			descLines = #b
+		elseif type(a) == "number" then
+			descLines = a
+		elseif type(a) == "table" then
+			descLines = #a
+		else
+			descLines = 1
+		end
+
+		local descH = descLines * font:getHeight()
+
+		local blockHeight = topHeight + 6 + descH + innerPad * 2
+
+		table.insert(blocks, {
+			entity = entity,
+			desc   = desc,
+			height = blockHeight
+		})
+
+		contentHeight = contentHeight + blockHeight + blockSpacing
+	end
+
+	if contentHeight > 0 then
+		contentHeight = contentHeight - blockSpacing
+	end
+
+	contentHeight = contentHeight + 10
+
+	return blocks, contentHeight
+end
+
+function world:spawnWindow_applyScroll(listH, contentHeight)
+	local maxScroll = (contentHeight > listH) and (listH - contentHeight) or 0
+	self.spawnWindow.maxScroll = maxScroll
+
+	if not self.spawnWindow.scrollY then self.spawnWindow.scrollY = 0 end
+	if self.spawnWindow.scrollY > 0 then self.spawnWindow.scrollY = 0 end
+	if self.spawnWindow.scrollY < maxScroll then self.spawnWindow.scrollY = maxScroll end
+end
+
+--#endregion
+
+-- Função principal
 function world:drawSpawnWindow()
 	if not self.spawnWindow.visible then return end
 
-	-- Fundo da janela
-	love.graphics.setColor(0.1, 0.1, 0.1, 0.95)
-	love.graphics.rectangle("fill", self.spawnWindow.x, self.spawnWindow.y, self.spawnWindow.w, self.spawnWindow.h, 12,
-		12)
+	self.spawnWindow.infoButtons = self.spawnWindow.infoButtons or {}
 
-	-- Borda
-	love.graphics.setColor(1, 1, 1)
-	love.graphics.rectangle("line", self.spawnWindow.x, self.spawnWindow.y, self.spawnWindow.w, self.spawnWindow.h, 12,
-		12)
+	local padding                = 10
+	local innerPad               = 10
+	local blockSpacing           = 10
 
-	-- Botão de fechar
-	UI.drawButton(self.spawnWindow.closeButton, self.uiFont)
+	local x0, y0, w0, h0         = self.spawnWindow.x, self.spawnWindow.y, self.spawnWindow.w, self.spawnWindow.h
 
-	-- Abas
-	for i, tabBtn in ipairs(self.spawnWindow.tabButtons) do
-		UI.drawButton(tabBtn, self.uiFont)
-	end
+	self:spawnWindow_drawBackground(x0, y0, w0, h0)
+	self:spawnWindow_drawTabsAndButtons()
 
-	-- Holder da lista de entidades
+	local listX = x0 + 10
+	local listY = y0 + 90
+	local listW = w0 - 20
+	local listH = h0 - 140
+
 	love.graphics.setColor(0.2, 0.2, 0.2, 0.8)
-	love.graphics.rectangle("fill", self.spawnWindow.x + 10, self.spawnWindow.y + 90, self.spawnWindow.w - 20,
-		self.spawnWindow.h - 140, 8, 8)
+	love.graphics.rectangle("fill", listX, listY, listW, listH, 8, 8)
 
-	-- Desenhar as entidades na lista
-	love.graphics.setColor(1, 1, 1)
-	local y_offset = self.spawnWindow.y + 100
-	local lineSpacing = 5   -- espaço entre stats
-	local entitySpacing = 10 -- espaço extra entre entidades
+	local sx, sy = UI.getScale()
+	love.graphics.setScissor(listX * sx, listY * sy, listW * sx, listH * sy)
 
-	for i, entity in ipairs(self.spawnWindow.entityList) do
-		local x = self.spawnWindow.x + 20
-		local font = love.graphics.getFont()
-		local padding = 5
+	local font = love.graphics.getFont()
+	local blocks, contentHeight =
+			self:spawnWindow_computeBlocks(listW, innerPad, blockSpacing, font)
 
-		-- Preparar stats
-		local stats = {}
-		local oxColor = { 0.4, 0.7, 1.0 }
-		local dietColor = { 0.4, 1.0, 0.4 }
-		local organicColor = { 1.0, 0.8, 0.4 }
-		local nutrientColor = { 1.0, 1.0, 0.0 }
+	self:spawnWindow_applyScroll(listH, contentHeight)
 
-		if entity.oxygen_cost then
-			table.insert(stats, { label = "Oxigênio consumido", value = -entity.oxygen_cost, color = oxColor })
-		elseif entity.oxygen_production then
-			table.insert(stats, { label = "Oxigênio produzido", value = entity.oxygen_production, color = oxColor })
-		end
+	local drawY = listY + innerPad + self.spawnWindow.scrollY
+	local drawX = listX + innerPad
 
-		if entity.diet and entity.nutrient_cost then
-			local dietLabel = "Dieta "
-			dietLabel = entity.diet == "herbivore" and dietLabel .. "herbívora" or dietLabel .. "carnívora"
-			dietLabel = dietLabel .. " consumida"
-			table.insert(stats, { label = dietLabel, value = -entity.nutrient_cost, color = dietColor })
-		elseif entity.nutrient_value then
-			table.insert(stats, { label = "Nutrição gerada", value = entity.nutrient_value, color = nutrientColor })
-		end
+	self.spawnWindow.renderedBlocks = {}
+	self.spawnWindow.blockIndex = 0
 
-		if entity.organic_cost then
-			table.insert(stats, { label = "Massa orgânica consumida", value = -entity.organic_cost, color = organicColor })
-		end
+	-- Esta variável será usada para o hitbox dos números coloridos
+	self.spawnWindow.coloredNumbers = {}
+	local selected = self.spawnWindow.selectedEntity
 
-		-- Calcula altura total das stats
-		local statPadding = 4
-		local statSpacing = lineSpacing
-		local totalStatsHeight = 0
-		for _, stat in ipairs(stats) do
-			totalStatsHeight = totalStatsHeight + font:getHeight() + statPadding * 2 + statSpacing
-		end
-		if totalStatsHeight > 0 then totalStatsHeight = totalStatsHeight - statSpacing end
+	for _, block in ipairs(blocks) do
+		local isSelected = (selected == block.entity)
+		self.spawnWindow.blockIndex = self.spawnWindow.blockIndex + 1
 
-		-- Altura da caixa do nome
-		local name = entity.name or entity.id
-		local nameHeight = font:getHeight() + padding * 2
+		local bh = self:spawnWindow_drawBlock(block, drawX, drawY, innerPad, listW, font, isSelected)
 
-		-- Altura total do bloco
-		local blockHeight = math.max(nameHeight, totalStatsHeight)
-		local y = y_offset
-		local nameY = y + (blockHeight - nameHeight) / 2
+		table.insert(self.spawnWindow.renderedBlocks, {
+			entity = block.entity,
+			hitbox = {
+				x = drawX - innerPad,
+				y = drawY - innerPad / 2,
+				w = listW,
+				h = bh
+			}
+		})
 
-		-- Fundo alternado opcional
-		if i % 2 == 0 then
-			love.graphics.setColor(0, 0, 0, 0.15)
-		else
-			love.graphics.setColor(0, 0, 0, 0.05)
-		end
-		love.graphics.rectangle("fill", self.spawnWindow.x + 10, y, self.spawnWindow.w - 20, blockHeight, 8, 8)
-
-		-- Caixa do nome
-		local nameWidth = font:getWidth(name) + padding * 2
-		if entity == self.spawnWindow.selectedEntity then
-			love.graphics.setColor(0.5, 0.8, 1.0, 0.3)
-		else
-			love.graphics.setColor(0, 0, 0, 0.3)
-		end
-		love.graphics.rectangle("fill", x, nameY, nameWidth, nameHeight, 4, 4)
-
-		-- Nome
-		love.graphics.setColor(1, 1, 1)
-		love.graphics.print(name, x + padding, nameY + padding)
-
-		-- Desenha stats
-		local statX = x + nameWidth + 10
-		local statY = y
-		for _, stat in ipairs(stats) do
-			local statText = string.format("%s: %.1f", stat.label, stat.value)
-			local statWidth = font:getWidth(statText) + statPadding * 2
-			local statHeight = font:getHeight() + statPadding * 2
-
-			-- Caixa do stat
-			love.graphics.setColor(0, 0, 0, 0.3)
-			love.graphics.rectangle("fill", statX, statY, statWidth, statHeight, 3, 3)
-
-			-- Texto
-			love.graphics.setColor(stat.color)
-			love.graphics.print(statText, statX + statPadding, statY + statPadding)
-
-			-- Próximo stat embaixo
-			statY = statY + statHeight + statSpacing
-		end
-
-		-- Linha divisória entre entidades
-		if i < #self.spawnWindow.entityList then
-			local lineY = y_offset + blockHeight + entitySpacing / 2 - 1
-			love.graphics.setColor(1, 1, 1, 0.1)
-			love.graphics.rectangle("fill", self.spawnWindow.x + 10, lineY, self.spawnWindow.w - 20, 1)
-		end
-
-		-- Próxima entidade
-		y_offset = y_offset + blockHeight + entitySpacing
-
-		love.graphics.setColor(1, 1, 1)
+		drawY = drawY + bh + blockSpacing
 	end
 
-	-- Botão de spawn
+	love.graphics.setScissor()
 	UI.drawButton(self.spawnWindow.spawnEntityButton, self.uiFont)
+end
+
+--#endregion
+
+-- Função para retornar plantas indevidamente fora do espaço de jogo
+function world:bringPlantsBack()
+	--TODO
+	-- Função irá iterar sobre as plantas e verificar se estão fora dos limites do mundo.
+	-- Se estiverem, reposicioná-las com os mesmos parâmetros de spawn.
+	-- Só deve ser chamada no :load() e após movê-las.
 end
 
 function world:update(dt)
@@ -943,11 +1178,51 @@ function world:draw()
 
 	if self.canAffordFeedback then UI.drawMessage(self.canAffordFeedback) end
 
+	if self.tooltip.visible then
+		UI.drawTooltip(self.tooltip)
+	end
+
 	love.graphics.pop()
+end
+
+function world:wheelmoved(dx, dy)
+	-- se não visível, ignora
+	if not self.spawnWindow or not self.spawnWindow.visible then return end
+
+	local sw = self.spawnWindow
+	local speed = 30 -- ajuste conforme preferir
+
+	-- aplicar scroll (dy positivo = roda pra cima)
+	sw.scrollY = (sw.scrollY or 0) + dy * speed
+
+	-- clamp seguro
+	if sw.scrollY > 0 then sw.scrollY = 0 end
+	if sw.scrollY < sw.maxScroll then sw.scrollY = sw.maxScroll end
 end
 
 function world:mousemoved(x, y)
 	x, y = UI.scaleMouse(x, y)
+
+	-- controle global do tooltip
+	local tooltipDebounce = false
+
+	if self.spawnWindow.visible and self.spawnWindow.coloredNumbers then
+		for _, info in ipairs(self.spawnWindow.coloredNumbers) do
+			if x >= info.x and x <= info.x + info.w and
+					y >= info.y and y <= info.y + info.h then
+				-- achou um número
+				self.tooltip.text = string.format(self.spawnWindowTooltipDictionary[info.category], info.value)
+				-- é tão instantâneo, porém uma ordem de acontecimento sempre é bom
+				self.tooltip.visible = true
+				tooltipDebounce = true
+				break
+			end
+		end
+
+		if not tooltipDebounce then
+			self.tooltip.visible = false
+		end
+	end
 
 	UI.updateButtonHover(self.backButton, x, y)
 	UI.updateButtonHover(self.spawnButton, x, y)
@@ -969,10 +1244,11 @@ end
 
 function world:mousepressed(x, y, button)
 	x, y = UI.scaleMouse(x, y)
+
 	UI.clickButton(self.backButton, button)
 	UI.clickButton(self.spawnButton, button)
 
-	if button == 1 and not self.spawnWindow.visib25le then
+	if button == 1 and not self.spawnWindow.visible then
 		-- Verificar clique em lixo para limpar
 		for _, waste in ipairs(self.wasteList) do
 			-- Só pode limpar quando o lixo estiver no chão
@@ -1008,43 +1284,22 @@ function world:mousepressed(x, y, button)
 		UI.clickButton(self.spawnWindow.closeButton, button)
 		UI.clickButton(self.spawnWindow.spawnEntityButton, button)
 
-		-- Verificar clique em entidades da lista
-		if button == 1 then
-			local y_offset = self.spawnWindow.y + 100
-			local entitySpacing = 10
-			local font = love.graphics.getFont()
-			local padding = 5
-			local lineSpacing = 5
-			local statPadding = 4
-
-			for _, entity in ipairs(self.spawnWindow.entityList) do
-				-- Conta quantos stats existem pra calcular altura aproximada
-				local statCount = 0
-				if entity.oxygen_cost or entity.oxygen_production then statCount = statCount + 1 end
-				if entity.diet and entity.nutrient_cost or entity.nutrient_value then statCount = statCount + 1 end
-				if entity.organic_cost then statCount = statCount + 1 end
-
-				local totalStatsHeight = statCount * (font:getHeight() + statPadding * 2 + lineSpacing)
-				if statCount > 0 then totalStatsHeight = totalStatsHeight - lineSpacing end
-
-				local nameHeight = font:getHeight() + padding * 2
-				local blockHeight = math.max(nameHeight, totalStatsHeight)
-				local blockX = self.spawnWindow.x + 10
-				local blockY = y_offset
-				local blockW = self.spawnWindow.w - 20
-
-				if x >= blockX and x <= blockX + blockW and y >= blockY and y <= blockY + blockHeight then
-					self.spawnWindow.selectedEntity = entity
-					break
-				end
-
-				y_offset = y_offset + blockHeight + entitySpacing
-			end
-		end
-
-
+		-- abas normalmente
 		for _, tabBtn in ipairs(self.spawnWindow.tabButtons) do
 			UI.clickButton(tabBtn, button)
+		end
+
+		-- clique em um bloco renderizado (respeita scroll porque hitbox foi calculada com drawY+scrollY)
+		if button == 1 and not self.spawnWindow.spawnEntityButton.hovered and self.spawnWindow.renderedBlocks then
+			-- converte coords do mouse para o sistema UI (igual usado no draw)
+			for _, rb in ipairs(self.spawnWindow.renderedBlocks) do
+				local hb = rb.hitbox
+				if x >= hb.x and x <= hb.x + hb.w and y >= hb.y and y <= hb.y + hb.h then
+					-- selecionou corretamente o entity daquele bloco
+					self.spawnWindow.selectedEntity = rb.entity
+					return
+				end
+			end
 		end
 	end
 end
