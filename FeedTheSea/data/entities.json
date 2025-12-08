@@ -4,6 +4,7 @@
 			"name": "Sardinha",
 			"sprite": "sardine.png",
 			"diet": "herbivore",
+			"description": "Este peixe de pequeno porte apresenta um baixo consumo de oxigênio (%.2f) além de uma dieta reduzida (%.2f). No ambiente, por conta de seu pequeno corpo, produz uma quantidade modesta de matéria orgânica (%.2f), contribuindo discretamente para o equilíbrio do ecossistema.",
 			"size": 0.5,
 			"oxygen_cost": 0.35,
 			"nutrient_cost": 0.1,
@@ -14,6 +15,7 @@
 			"name": "Tilápia",
 			"sprite": "tilapia.png",
 			"diet": "herbivore",
+			"description": "Esta espécie de porte moderado apresenta um consumo de oxigênio relativamente elevado (%.2f) em relação ao seu antecessor e portanto demanda de uma dieta herbívora compatível (%.2f). Cada indivíduo gera uma quantidade considerável de matéria orgânica (%.2f), influenciando de forma perceptível o ecossistema.",
 			"size": 1.1,
 			"oxygen_cost": 0.65,
 			"nutrient_cost": 0.22,
@@ -25,6 +27,7 @@
 		"plant001": {
 			"name": "Alga",
 			"sprite": "seaweed.png",
+			"description": "Esta planta aquática de pequeno porte contribui significativamente para o ambiente por meio da produção de oxigênio (%.2f) e do fornecimento de nutrientes para herbívoros (%.2f). Em contrapartida, apresenta um consumo não tão pequeno de matéria orgânica (%.2f), desempenhando um papel equilibrado no ciclo ecológico.",
 			"oxygen_production": 1,
 			"nutrient_value": 0.5,
 			"organic_cost": 2.5,
