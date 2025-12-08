@@ -54,6 +54,12 @@ function sceneManager:draw()
 	end
 end
 
+function sceneManager:wheelmoved(x, y)
+	if self.current and self.current.wheelmoved then
+		self.current:wheelmoved(x, y)
+	end
+end
+
 function sceneManager:keypressed(key)
 	if self.current and self.current.keypressed then
 		self.current:keypressed(key)
