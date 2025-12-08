@@ -21,7 +21,10 @@ end
 
 -- Função para alterar resolução
 function UI.setDimensions(newW, newH)
+	-- love.window.setMode(UI.UI_BASE_W, UI.UI_BASE_H, {minwidth=UI.UI_BASE_W, minheight=UI.UI_BASE_H})
+	local w, h = love.graphics.getDimensions()
 	UI.UI_BASE_W, UI.UI_BASE_H = newW, newH
+	love.window.setMode(w, h, { resizable = true, minwidth = UI.UI_BASE_W, minheight = UI.UI_BASE_H })
 	sceneManager:reloadScene()
 end
 
@@ -35,8 +38,8 @@ end
 
 -- Função para escalar coordenadas do mouse
 function UI.scaleMouse(x, y)
-    local sx, sy = UI.getScale()
-    return x / sx, y / sy
+	local sx, sy = UI.getScale()
+	return x / sx, y / sy
 end
 
 -- Função para criar um input de texto
@@ -89,6 +92,66 @@ function UI.newMessage(text, font)
 		closable = true, -- fecha ao clicar
 	}
 	return message
+end
+
+-- Função para criar tooltip (mensagem preso ao mouse)
+function UI.newTooltip(text, font, maxX)
+	local tooltip = {
+		text = text or "",
+		font = font or love.graphics.getFont(),
+		maxX = maxX or 0,
+		alpha = 0.9,
+		visible = false
+	}
+	return tooltip
+end
+
+-- Função para desenhar tooltip
+function UI.drawTooltip(tooltip)
+	if not tooltip.visible then return end
+
+	local mx, my = UI.scaleMouse(love.mouse.getPosition())
+	local font = tooltip.font
+	love.graphics.setFont(font)
+
+	-- quebra automática de linhas
+	local maxWidth = tooltip.maxX or 300
+	local wrappedText, wrappedLines = font:getWrap(tooltip.text, maxWidth)
+
+	-- calcula largura/altura final do texto
+	local tw = 0
+	for _, line in ipairs(wrappedLines) do
+		local w = font:getWidth(line)
+		if w > tw then tw = w end
+	end
+
+	local lineHeight = font:getHeight()
+	local th = #wrappedLines * lineHeight
+
+	-- padding da caixa
+	local paddingX = 16
+	local paddingY = 12
+
+	local boxW = tw + paddingX * 2
+	local boxH = th + paddingY * 2
+
+	-- posição da caixa (centralizada no mouse)
+	local bx = mx - boxW / 2
+	local by = my - boxH - 10 -- leve deslocamento pra cima
+
+	-- fundo com arredondamento
+	love.graphics.setColor(0, 0, 0, tooltip.alpha)
+	love.graphics.rectangle("fill", bx, by, boxW, boxH, 12, 12)
+
+	-- texto
+	love.graphics.setColor(1, 1, 1, tooltip.alpha)
+	love.graphics.printf(
+		tooltip.text,
+		bx + paddingX,
+		by + paddingY,
+		tw,
+		"left"
+	)
 end
 
 -- Função para desenhar mensagem
