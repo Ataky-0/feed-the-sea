@@ -45,6 +45,7 @@ local function defaultSave()
 	return {
 		oxygen = 5,
 		food = { herbivore = 0, carnivore = 0 },
+		unlocked_info = {},
 		fish = {},
 		producers = {},
 		waste = {},
