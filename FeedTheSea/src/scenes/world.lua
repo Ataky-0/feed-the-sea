@@ -493,7 +493,7 @@ function world:spawnFish(entity)
 		id = entity.id,
 		name = entity.name,
 		x = math.random(100, ww - 100),
-		y = math.random(100, wh - 100),
+		y = math.random(self.topBarHeight+128, wh-(self.topBarHeight+128)),
 		size = entity.size,
 		width = 128,
 		height = 128,
@@ -1205,9 +1205,11 @@ function world:update(dt)
 
 		-- Inverter direção ao bater nas bordas
 		if fish.x - (fish.width / 2) * fish.size < 0 or fish.x + (fish.width / 2) * fish.size > ww then
+			fish.x = fish.x + (fish.velocityX > 0 and -10 or (fish.velocityX < 0 and 10 or 0))
 			fish.velocityX = -fish.velocityX
 		end
 		if fish.y - (fish.height / 2) * fish.size < self.topBarHeight or fish.y + (fish.height / 2) * fish.size > wh then
+			fish.y = fish.y + (fish.velocityY > 0 and -10 or (fish.velocityY < 0 and 10 or 0))
 			fish.velocityY = -fish.velocityY
 		end
 	end
