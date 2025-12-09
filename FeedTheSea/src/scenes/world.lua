@@ -94,6 +94,8 @@ function world:load(saveMeta)
 		end
 	end
 
+	self:bringPlantsBack()
+
 	for _, waste in ipairs(self.saveData.waste or {}) do
 		local ent = entitiesManager.getWasteById(waste.id)
 		if ent then
@@ -423,16 +425,7 @@ local function isTooClose(x, y, list, minDist)
 	return false
 end
 
--- Função para invocar uma planta no mundo
-function world:spawnPlant(entity)
-	if not self.saveData.unlocked_info[entity.id] then
-		self.saveData.unlocked_info[entity.id] = true
-	end
-
-	local groundY  = wh * 0.80
-	local minY     = groundY - 20
-	local maxY     = groundY + 90
-
+function world:randomGroundPos(minY, maxY)
 	local x        = math.random(100, ww - 100)
 	local y        = biasedRandom(minY, maxY, 2)
 
@@ -443,7 +436,23 @@ function world:spawnPlant(entity)
 		attempts = attempts + 1
 	end
 
+	return x, y
+end
+
+-- Função para invocar uma planta no mundo
+function world:spawnPlant(entity)
+	if not self.saveData.unlocked_info[entity.id] then
+		self.saveData.unlocked_info[entity.id] = true
+	end
+
+	local groundY  = wh * 0.80
+	local minY     = groundY - 20
+	local maxY     = groundY + 90
+
+
 	local entityWidth, entityHeight = entity.w, entity.h
+
+	local x, y = self:randomGroundPos(minY, maxY)
 
 	local normX = round3(x / ww) -- 0.000 – 1.000
 	local normY = round3(y / wh)
@@ -1122,10 +1131,24 @@ end
 
 -- Função para retornar plantas indevidamente fora do espaço de jogo
 function world:bringPlantsBack()
-	--TODO
 	-- Função irá iterar sobre as plantas e verificar se estão fora dos limites do mundo.
 	-- Se estiverem, reposicioná-las com os mesmos parâmetros de spawn.
 	-- Só deve ser chamada no :load() e após movê-las.
+	for _, plant in ipairs(self.plantList) do
+		if plant.x < 0 or plant.x > ww or plant.y < self.topBarHeight or plant.y > wh then
+			-- Reposicionar
+			local groundY  = wh * 0.80
+			local minY     = groundY - 20
+			local maxY     = groundY + 90
+
+			local x, y = self:randomGroundPos(minY, maxY)
+
+			plant.x = x
+			plant.y = y
+			plant.normX = round3(x / ww)
+			plant.normY = round3(y / wh)
+		end
+	end
 end
 
 function world:update(dt)
@@ -1451,6 +1474,7 @@ function world:mousereleased(x, y, button)
 			self.draggedPlant.normX = round3(self.draggedPlant.x / ww)
 			self.draggedPlant.normY = round3(self.draggedPlant.y / wh)
 			self.draggedPlant = nil
+			self:bringPlantsBack()
 		end
 	end
 end
