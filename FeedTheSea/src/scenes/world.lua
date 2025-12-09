@@ -146,6 +146,17 @@ function world:load(saveMeta)
 		selectedEntity = nil -- Entidade selecionada para spawn
 	}
 
+	self.spawnWindow.infoWindow = {
+		visible = false,
+		scrollY = 0,
+		maxScroll = 0,
+		text = "",
+		x = 0,
+		y = 0,
+		w = 0,
+		h = 0
+	}
+
 	-- Carregar entidades iniciais para a primeira aba
 	self:loadEntitiesForTab(1)
 
@@ -172,6 +183,7 @@ function world:load(saveMeta)
 		"+",
 		ww - 165, 20, 40, 40,
 		function()
+			self.spawnWindow.infoButtons = {} -- Necessário para resetar os botões de info
 			self.spawnWindow.visible = not self.spawnWindow.visible
 		end
 	)
@@ -686,6 +698,57 @@ function world:spawnWindow_drawTabsAndButtons()
 	end
 end
 
+function world:spawnWindow_drawInfoButton(textH, drawX, drawY, contentW, topHeight, block, font)
+	local infoSize = textH + 6
+	local infoX = drawX + contentW - infoSize -- extrema direita do bloco
+	local infoY = drawY + (topHeight / 2) - (infoSize)
+
+	local btn
+	-- Checar se já existe botão criado para este bloco
+	for _, infoBtn in ipairs(self.spawnWindow.infoButtons) do
+		if infoBtn.entity == block.entity then
+			btn = infoBtn.button
+		end
+	end
+
+	if not btn then
+		btn = UI.newButton("ℹ", infoX, infoY, infoSize, infoSize, function()
+			if self.spawnWindow.infoWindow.text == block.entity.curiosity then
+				-- fechar janela se já estiver aberta com o mesmo texto
+				self.spawnWindow.infoWindow.visible = false
+				self.spawnWindow.infoWindow.text = ""
+				return
+			end
+
+			self.spawnWindow.infoWindow.text = block.entity.curiosity or ""
+			self.spawnWindow.infoWindow.visible = true
+		end)
+		-- Registra o botão (para hitbox/click)
+		table.insert(self.spawnWindow.infoButtons, {
+			button = btn,
+			x = infoX,
+			y = infoY,
+			w = infoSize,
+			h = infoSize,
+			entity = block.entity
+		})
+	else
+		-- Atualiza posição
+		btn.x = infoX
+		btn.y = infoY
+		btn.w = infoSize
+		btn.h = infoSize
+	end
+
+	if not self.saveData.unlocked_info[block.entity.id] then
+		btn.disabled = true
+		btn.hovered = false
+	else btn.disabled = false
+	end
+
+	UI.drawButton(btn, font)
+end
+
 function world:spawnWindow_drawBlock(block, drawX, drawY, innerPad, listW, font, isSelected)
 	-- largura útil para conteúdo
 	local contentW = listW - innerPad * 2
@@ -736,30 +799,7 @@ function world:spawnWindow_drawBlock(block, drawX, drawY, innerPad, listW, font,
 	local topHeight = math.max(textH, iconSize)
 
 	-- BOTÃO DE INFORMAÇÕES (ℹ)
-	local infoSize = textH + 6
-	local infoX = drawX + contentW - infoSize -- extrema direita do bloco
-	local infoY = drawY + (topHeight / 2) - (infoSize)
-
-	local btn = UI.newButton("ℹ", infoX, infoY, infoSize, infoSize, function()
-		print("Info sobre:", block.entity.name or block.entity.id)
-	end)
-
-	if not self.saveData.unlocked_info[block.entity.id] then
-		btn.disabled = true
-		btn.hovered = false
-	end
-
-	-- Registra o botão (para hitbox/click)
-	table.insert(self.spawnWindow.infoButtons, {
-		button = btn,
-		x = infoX,
-		y = infoY,
-		w = infoSize,
-		h = infoSize,
-		entity = block.entity
-	})
-
-	UI.drawButton(btn, font)
+	self:spawnWindow_drawInfoButton(textH, drawX, drawY, contentW, topHeight, block, font)
 
 	-- descrição
 	local wrapped, lines = font:getWrap(block.desc, contentW)
@@ -933,7 +973,7 @@ function world:spawnWindow_computeBlocks(listW, innerPad, blockSpacing, font)
 	return blocks, contentHeight
 end
 
-function world:spawnWindow_applyScroll(listH, contentHeight)
+function world:spawnWindow_applyScroll(listH, contentHeight) --TODO: Isso provavelmente é desnecessário
 	local maxScroll = (contentHeight > listH) and (listH - contentHeight) or 0
 	self.spawnWindow.maxScroll = maxScroll
 
@@ -942,19 +982,86 @@ function world:spawnWindow_applyScroll(listH, contentHeight)
 	if self.spawnWindow.scrollY < maxScroll then self.spawnWindow.scrollY = maxScroll end
 end
 
+function world:spawnWindow_updateInfoWindowGeometry()
+	local sw = self.spawnWindow
+
+	-- metade da largura do spawnWindow
+	local infoW = sw.w * 0.5
+	local infoH = sw.h
+
+	local gap = 30
+
+	sw.infoWindow.x = sw.x + sw.w + gap
+	sw.infoWindow.y = sw.y
+	sw.infoWindow.w = infoW
+	sw.infoWindow.h = infoH
+end
+
+function world:spawnWindow_drawInfoWindow()
+	local win = self.spawnWindow.infoWindow
+	if not win.visible then return end
+
+	local text = win.text or ""
+
+	-- Fundo
+	love.graphics.setColor(0.1, 0.1, 0.1, 0.95)
+	love.graphics.rectangle("fill", win.x, win.y, win.w, win.h, 12, 12)
+
+	love.graphics.setColor(1, 1, 1)
+	love.graphics.rectangle("line", win.x, win.y, win.w, win.h, 12, 12)
+
+	-- Área de texto
+	local pad        = 10
+	local textX      = win.x + pad
+	local textY      = win.y + pad
+	local textW      = win.w - pad * 2
+
+	-- Medir altura total do texto com wrap
+	local font       = love.graphics.getFont()
+	local _, wrapped = font:getWrap(text, textW)
+	local textHeight = #wrapped * font:getHeight()
+
+	-- Scroll usando o padrão do spawnWindow
+	local visibleH   = win.h - pad * 2
+	win.maxScroll    = (textHeight > visibleH) and (visibleH - textHeight) or 0
+
+	win.scrollY      = win.scrollY or 0
+	if win.scrollY > 0 then win.scrollY = 0 end
+	if win.scrollY < win.maxScroll then win.scrollY = win.maxScroll end
+
+	-- Scissor
+	local sx, sy = UI.getScale()
+	love.graphics.setScissor(
+		win.x * sx,
+		win.y * sy,
+		win.w * sx,
+		win.h * sy
+	)
+
+	love.graphics.printf(
+		string.format(text),
+		textX,
+		textY + win.scrollY,
+		textW,
+		"left"
+	)
+
+	love.graphics.setScissor()
+end
+
 --#endregion
 
 -- Função principal
 function world:drawSpawnWindow()
 	if not self.spawnWindow.visible then return end
 
-	self.spawnWindow.infoButtons = self.spawnWindow.infoButtons or {}
+	local padding        = 10
+	local innerPad       = 10
+	local blockSpacing   = 10
 
-	local padding                = 10
-	local innerPad               = 10
-	local blockSpacing           = 10
+	local x0, y0, w0, h0 = self.spawnWindow.x, self.spawnWindow.y, self.spawnWindow.w, self.spawnWindow.h
 
-	local x0, y0, w0, h0         = self.spawnWindow.x, self.spawnWindow.y, self.spawnWindow.w, self.spawnWindow.h
+	self:spawnWindow_updateInfoWindowGeometry()
 
 	self:spawnWindow_drawBackground(x0, y0, w0, h0)
 	self:spawnWindow_drawTabsAndButtons()
@@ -984,6 +1091,7 @@ function world:drawSpawnWindow()
 
 	-- Esta variável será usada para o hitbox dos números coloridos
 	self.spawnWindow.coloredNumbers = {}
+
 	local selected = self.spawnWindow.selectedEntity
 
 	for _, block in ipairs(blocks) do
@@ -1007,6 +1115,7 @@ function world:drawSpawnWindow()
 
 	love.graphics.setScissor()
 	UI.drawButton(self.spawnWindow.spawnEntityButton, self.uiFont)
+	self:spawnWindow_drawInfoWindow()
 end
 
 --#endregion
@@ -1186,18 +1295,42 @@ function world:draw()
 end
 
 function world:wheelmoved(dx, dy)
-	-- se não visível, ignora
-	if not self.spawnWindow or not self.spawnWindow.visible then return end
+	local scrollSpeed = 30 -- ajuste conforme preferir
 
-	local sw = self.spawnWindow
-	local speed = 30 -- ajuste conforme preferir
+	if self.spawnWindow and self.spawnWindow.visible then
+		local x, y = UI.scaleMouse(love.mouse.getPosition())
+		-- Checar se mouse está dentro da janela (x,y,w,h)
+		if x >= self.spawnWindow.x and x <= self.spawnWindow.x + self.spawnWindow.w and
+				y >= self.spawnWindow.y and y <= self.spawnWindow.y + self.spawnWindow.h then
+			self.spawnWindow.scrollY = (self.spawnWindow.scrollY or 0) + dy * scrollSpeed
 
-	-- aplicar scroll (dy positivo = roda pra cima)
-	sw.scrollY = (sw.scrollY or 0) + dy * speed
+			-- clamp seguro
+			if self.spawnWindow.scrollY > 0 then self.spawnWindow.scrollY = 0 end
+			if self.spawnWindow.scrollY < self.spawnWindow.maxScroll then
+				self.spawnWindow.scrollY = self.spawnWindow
+						.maxScroll
+			end
+			return -- evitar verificações posteriores
+		end
+	end
 
-	-- clamp seguro
-	if sw.scrollY > 0 then sw.scrollY = 0 end
-	if sw.scrollY < sw.maxScroll then sw.scrollY = sw.maxScroll end
+	if self.spawnWindow.infoWindow and self.spawnWindow.infoWindow.visible then
+		local x, y = UI.scaleMouse(love.mouse.getPosition())
+		-- Checar se mouse está dentro da janela (x,y,w,h)
+		if x >= self.spawnWindow.infoWindow.x and x <= self.spawnWindow.infoWindow.x + self.spawnWindow.infoWindow.w and
+				y >= self.spawnWindow.infoWindow.y and y <= self.spawnWindow.infoWindow.y + self.spawnWindow.infoWindow.h then
+			-- Mesma coisa do spawnWindow
+			self.spawnWindow.infoWindow.scrollY = (self.spawnWindow.infoWindow.scrollY or 0) + dy * scrollSpeed
+
+			-- clamp seguro
+			if self.spawnWindow.infoWindow.scrollY > 0 then self.spawnWindow.infoWindow.scrollY = 0 end
+			if self.spawnWindow.infoWindow.scrollY < self.spawnWindow.infoWindow.maxScroll then
+				self.spawnWindow.infoWindow.scrollY = self.spawnWindow.infoWindow
+						.maxScroll
+			end
+			return -- evitar verificações posteriores
+		end
+	end
 end
 
 function world:mousemoved(x, y)
@@ -1227,6 +1360,10 @@ function world:mousemoved(x, y)
 	UI.updateButtonHover(self.backButton, x, y)
 	UI.updateButtonHover(self.spawnButton, x, y)
 
+	for _, btn in ipairs(self.spawnWindow.infoButtons or {}) do
+		UI.updateButtonHover(btn.button, x, y)
+	end
+
 	if self.draggedPlant then
 		self.draggedPlant.x = x - self.dragPlantOffsetX
 		self.draggedPlant.y = y - self.dragPlantOffsetY
@@ -1247,6 +1384,10 @@ function world:mousepressed(x, y, button)
 
 	UI.clickButton(self.backButton, button)
 	UI.clickButton(self.spawnButton, button)
+
+	for _, btn in ipairs(self.spawnWindow.infoButtons or {}) do
+		UI.clickButton(btn.button, button)
+	end
 
 	if button == 1 and not self.spawnWindow.visible then
 		-- Verificar clique em lixo para limpar
