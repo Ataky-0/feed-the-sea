@@ -8,7 +8,7 @@ local options = {}
 local ww, wh = UI.getDimensions()
 
 local resolutions = {
-	{ 800,  600 },
+	-- { 800,  600 }, Por enquanto não suportado
 	{ 1280, 720 },
 	{ 1366, 768 },
 	{ 1920, 1080 },
