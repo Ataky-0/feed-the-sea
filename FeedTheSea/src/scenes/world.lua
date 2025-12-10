@@ -45,6 +45,7 @@ function world:load(saveMeta)
 	--#endregion
 
 	-- Variáveis usadas pelo acréscimo temporizado de Matéria orgânica
+	self.fishOrganicMatterCurrentRate = 0
 	self.fishOrganicMatterWasteImpact = 0.025
 	self.fishOrganicMatterMultiplier = 1.0
 	self.fishOrganicMatterTimer = 0
@@ -53,6 +54,7 @@ function world:load(saveMeta)
 	-- Variáveis usadas pelo evento temporizado de Lixo marítimo
 	self.wasteEventTimer = 0
 	self.wasteEventInterval = 90 -- 1 minuto e meio
+	self.wasteEventMaxAmount = (1 / self.fishOrganicMatterWasteImpact) * 2
 
 	-- Imagem de fundo
 	self.background = love.graphics.newImage("assets/background.png")
@@ -71,6 +73,8 @@ function world:load(saveMeta)
 			self:spawnFish(ent)
 		end
 	end
+
+	self:refreshFishOrganicRate()
 
 	for _, plant in ipairs(self.saveData.producers or {}) do
 		local ent = entitiesManager.getPlantById(plant.id)
@@ -445,9 +449,9 @@ function world:spawnPlant(entity)
 		self.saveData.unlocked_info[entity.id] = true
 	end
 
-	local groundY  = wh * 0.80
-	local minY     = groundY - 20
-	local maxY     = groundY + 90
+	local groundY = wh * 0.80
+	local minY    = groundY - 20
+	local maxY    = groundY + 90
 
 
 	local entityWidth, entityHeight = entity.w, entity.h
@@ -493,7 +497,7 @@ function world:spawnFish(entity)
 		id = entity.id,
 		name = entity.name,
 		x = math.random(100, ww - 100),
-		y = math.random(self.topBarHeight+128, wh-(self.topBarHeight+128)),
+		y = math.random(self.topBarHeight + 128, wh - (self.topBarHeight + 128)),
 		size = entity.size,
 		width = 128,
 		height = 128,
@@ -752,7 +756,8 @@ function world:spawnWindow_drawInfoButton(textH, drawX, drawY, contentW, topHeig
 	if not self.saveData.unlocked_info[block.entity.id] then
 		btn.disabled = true
 		btn.hovered = false
-	else btn.disabled = false
+	else
+		btn.disabled = false
 	end
 
 	UI.drawButton(btn, font)
@@ -1137,18 +1142,36 @@ function world:bringPlantsBack()
 	for _, plant in ipairs(self.plantList) do
 		if plant.x < 0 or plant.x > ww or plant.y < self.topBarHeight or plant.y > wh then
 			-- Reposicionar
-			local groundY  = wh * 0.80
-			local minY     = groundY - 20
-			local maxY     = groundY + 90
+			local groundY = wh * 0.80
+			local minY    = groundY - 20
+			local maxY    = groundY + 90
 
-			local x, y = self:randomGroundPos(minY, maxY)
+			local x, y    = self:randomGroundPos(minY, maxY)
 
-			plant.x = x
-			plant.y = y
-			plant.normX = round3(x / ww)
-			plant.normY = round3(y / wh)
+			plant.x       = x
+			plant.y       = y
+			plant.normX   = round3(x / ww)
+			plant.normY   = round3(y / wh)
 		end
 	end
+end
+
+-- Função para retornar o máximo de matéria orgânica permitida
+function world:getMaxOrganicMatter()
+	-- Limite atual segue uma equação simples onde o valor de produção de matéria orgânica
+	-- * 10 define o limite máximo.
+	return self.fishOrganicMatterCurrentRate * 10
+end
+
+function world:refreshFishOrganicRate()
+	local totalProd = 0
+
+	for _, fish in ipairs(self.fishList) do
+		totalProd = totalProd + fish.organic_production
+	end
+
+	totalProd = totalProd * self.fishOrganicMatterMultiplier
+	self.fishOrganicMatterCurrentRate = totalProd
 end
 
 function world:update(dt)
@@ -1157,15 +1180,11 @@ function world:update(dt)
 	self.fishOrganicMatterMultiplier = math.max(0, 1.0 - (#self.wasteList * self.fishOrganicMatterWasteImpact)) -- diminui 2.5% por lixo
 
 	if self.fishOrganicMatterTimer >= self.fishOrganicMatterInterval then
-		local totalProd = 0
+		self:refreshFishOrganicRate()
 
-		for _, fish in ipairs(self.fishList) do
-			totalProd = totalProd + fish.organic_production
+		if self.saveData.organic_matter < self:getMaxOrganicMatter() then
+			self.saveData.organic_matter = (self.saveData.organic_matter or 0) + self.fishOrganicMatterCurrentRate
 		end
-
-		totalProd = totalProd * self.fishOrganicMatterMultiplier
-
-		self.saveData.organic_matter = (self.saveData.organic_matter or 0) + totalProd
 
 		self.fishOrganicMatterTimer = 0
 	end
@@ -1188,7 +1207,7 @@ function world:update(dt)
 		-- Invocar lixo em uma posição aleatória
 		local wasteEntities = entitiesManager.getWasteList()
 
-		if #wasteEntities > 0 then
+		if #wasteEntities > 0 and #self.wasteList < self.wasteEventMaxAmount then
 			for _ = 1, math.random(3, 6) do
 				local wasteEnt = wasteEntities[math.random(1, #wasteEntities)]
 				self:spawnWaste(wasteEnt)
@@ -1274,13 +1293,15 @@ function world:draw()
 	local startX = 40
 	local spacing = 225
 
+	local isOrganicMaxed = self.saveData.organic_matter >= self:getMaxOrganicMatter()
+
 	-- Linha 1: Oxigênio e Matéria orgânica
 	love.graphics.setColor(self.uiLabels.oxygen.color)
 	love.graphics.print(string.format("%s: %.2f mg O₂", self.uiLabels.oxygen.label, self.saveData.oxygen), startX, y1)
 	love.graphics.setColor(self.uiLabels.organic.color)
 	love.graphics.print(
-		string.format("%s: %.2f mg C (x%.2f)", self.uiLabels.organic.label, self.saveData.organic_matter,
-			self.fishOrganicMatterMultiplier),
+		string.format("%s: %.2f mg C (%s)", self.uiLabels.organic.label, self.saveData.organic_matter,
+			isOrganicMaxed and "Maxed" or string.format("x%.2f", self.fishOrganicMatterMultiplier)),
 		startX + spacing,
 		y1)
 
