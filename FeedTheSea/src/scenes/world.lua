@@ -1451,9 +1451,9 @@ function world:mousepressed(x, y, button)
 		end
 
 		-- Verificar clique em plantas para arrastar
-		for _, plant in ipairs(self.plantList) do
-			-- Hitbox apromixado
-			local radius = plant.size * 0.5 * math.max(plant.width, plant.height) -- aproximação do “hit‑box”
+		for i = #self.plantList, 1, -1 do
+			local plant = self.plantList[i]
+			local radius = plant.size * 0.5 * math.max(plant.width, plant.height)
 			if (x - plant.x) ^ 2 + (y - plant.y) ^ 2 <= radius ^ 2 then
 				self.draggedPlant = plant
 				self.dragPlantOffsetX = x - plant.x
