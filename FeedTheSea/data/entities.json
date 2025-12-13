@@ -5,7 +5,7 @@
 			"sprite": "sardine.png",
 			"diet": "herbivore",
 			"description": "Este peixe de pequeno porte apresenta um baixo consumo de oxigênio (%.2f) além de uma dieta reduzida (%.2f). No ambiente, por conta de seu pequeno corpo, produz uma quantidade modesta de matéria orgânica (%.2f), contribuindo discretamente para o equilíbrio do ecossistema.",
-			"curiosity":"As sardinhas são conhecidas por formarem grandes cardumes, o que lhes proporciona proteção contra predadores e aumenta sua eficiência na busca por alimento.",
+			"curiosity": "As sardinhas são conhecidas por formarem grandes cardumes, o que lhes proporciona proteção contra predadores e aumenta sua eficiência na busca por alimento.",
 			"size": 0.5,
 			"oxygen_cost": 0.35,
 			"nutrient_cost": 0.1,
@@ -23,6 +23,18 @@
 			"nutrient_cost": 0.22,
 			"organic_production": 0.06,
 			"limit": 12
+		},
+		"fish003": {
+			"name": "Cavala",
+			"sprite": "atlantic-mackerel.png",
+			"diet": "carnivore",
+			"description": "A cavala é um peixe de porte semelhante à tilápia, porém com metabolismo mais intenso por ser carnívora. Apresenta um consumo de oxigênio elevado (%.2f), exigindo uma dieta rica em nutrientes animais (%.2f). Produz uma quantidade significativa de matéria orgânica (%.2f), refletindo sua alta atividade no ambiente.",
+			"curiosity": "A cavala é conhecida por sua velocidade e por nadar em grandes cardumes costeiros, sendo um predador ativo que desempenha papel essencial no controle de populações menores de peixes.",
+			"size": 1.05,
+			"oxygen_cost": 0.78,
+			"nutrient_cost": 0.30,
+			"organic_production": 0.075,
+			"limit": 10
 		}
 	},
 	"plant": {
@@ -31,6 +43,7 @@
 			"sprite": "seaweed.png",
 			"description": "Esta planta aquática de pequeno porte contribui significativamente para o ambiente por meio da produção de oxigênio (%.2f) e do fornecimento de nutrientes para herbívoros (%.2f). Em contrapartida, apresenta um consumo não tão pequeno de matéria orgânica (%.2f), desempenhando um papel equilibrado no ciclo ecológico.",
 			"curiosity": "As algas marinhas são essenciais para a saúde dos ecossistemas aquáticos, pois produzem grande parte do oxigênio que respiramos e servem como base da cadeia alimentar marinha.",
+			"produces": "herbivore",
 			"oxygen_production": 1,
 			"nutrient_value": 0.5,
 			"organic_cost": 2.5,
@@ -40,7 +53,23 @@
 			"h": 387
 		}
 	},
-	"shoal": {},
+	"shoal": {
+		"shoal001": {
+			"name": "Cardume de Sardinhas",
+			"sprite": "sardine-shoal.png",
+			"description": "Este agrupamento de sardinhas consome uma quantidade moderada de oxigênio (%.2f) e se alimenta de nutrientes herbívoros de forma eficiente (%.2f). Em troca, o cardume gera nutrientes essenciais para peixes carnívoros (%.2f), desempenhando um papel importante na dinâmica alimentar do ecossistema.",
+			"curiosity": "Cardumes de sardinhas podem se estender por quilômetros, formando verdadeiras nuvens no oceano que são visíveis até do espaço.",
+			"diet": "herbivore",
+			"produces": "carnivore",
+			"oxygen_cost": 1.25,
+			"nutrient_cost": 0.35,
+			"nutrient_value": 0.35,
+			"size": 0.35,
+			"limit": 5,
+			"w": 270,
+			"h": 450
+		}
+	},
 	"waste": {
 		"broken-glass": {
 			"name": "Vidro Quebrado",

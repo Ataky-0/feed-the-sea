@@ -32,6 +32,8 @@ function world:load(saveMeta)
 		error("Erro: save não pôde ser carregado.")
 	end
 
+	self.ambientColor = { 235 / 255, 245 / 255, 250 / 255 }
+
 	--#region Converter save
 	-- Esta seção tem como objetivo converter saves antigos para novos formatos (aliado ao savesManager.normalizeSave)
 	-- É temporário e não deve ser realizado fora do world.lua (mesmo que faça mais sentido estar em savesManager.lua)
@@ -66,7 +68,7 @@ function world:load(saveMeta)
 	self.messageFont = love.graphics.newFont("assets/fonts/DejaVuSans.ttf", 24)
 	self.topBarHeight = 80
 
-	--#region Invocar peixes, plantas e lixos do save
+	--#region Invocar peixes, plantas, cardumes e lixos do save
 	for id, qty in pairs(self.saveData.fish or {}) do
 		local ent = assert(entitiesManager.getFishById(id), "Peixe inexistente.") -- assume que existe
 		for _ = 1, qty do
@@ -76,24 +78,52 @@ function world:load(saveMeta)
 
 	self:refreshFishOrganicRate()
 
-	for _, plant in ipairs(self.saveData.producers or {}) do
-		local ent = entitiesManager.getPlantById(plant.id)
+	-- Plantas e Cardumes
+	for _, producer in ipairs(self.saveData.producers or {}) do
+		local ent
+		local kind
+
+		ent = entitiesManager.getPlantById(producer.id)
 		if ent then
-			self:spawnPlant(ent)                   -- cria a planta com coordenadas “aleatórias” temporárias
-			local p = self.plantList[#self.plantList] -- última inserida
-			-- recalcula a posição real a partir dos percentuais salvos
-			if plant.normX and plant.normY then
-				p.normX = plant.normX
-				p.normY = plant.normY
-				p.x = round3(p.normX * ww)
-				p.y = round3(p.normY * wh)
-			else
-				-- fallback para saves antigos que ainda tenham x/y
-				-- TODO: Remover após primeira release 👍👍👍
-				p.x = plant.x or p.x
-				p.y = plant.y or p.y
-				p.normX = round3(p.x / ww)
-				p.normY = round3(p.y / wh)
+			kind = "plant"
+		else
+			ent = entitiesManager.getShoalById(producer.id)
+			if ent then
+				kind = "shoal"
+			end
+		end
+
+		if ent then
+			if kind == "plant" then
+				self:spawnPlant(ent)
+				local p = self.plantList[#self.plantList]
+
+				if producer.normX and producer.normY then
+					p.normX = producer.normX
+					p.normY = producer.normY
+					p.x = round3(p.normX * ww)
+					p.y = round3(p.normY * wh)
+				else
+					p.x = producer.x or p.x
+					p.y = producer.y or p.y
+					p.normX = round3(p.x / ww)
+					p.normY = round3(p.y / wh)
+				end
+			elseif kind == "shoal" then
+				self:spawnShoal(ent)
+				local s = self.shoalList[#self.shoalList]
+
+				if producer.normX and producer.normY then
+					s.normX = producer.normX
+					s.normY = producer.normY
+					s.x = round3(s.normX * ww)
+					s.y = round3(s.normY * wh)
+				else
+					s.x = producer.x or s.x
+					s.y = producer.y or s.y
+					s.normX = round3(s.x / ww)
+					s.normY = round3(s.y / wh)
+				end
 			end
 		end
 	end
@@ -135,6 +165,8 @@ function world:load(saveMeta)
 		organic_production = "Esta entidade produz %.2f de Matéria Orgânica.",
 		oxygen_production  = "Esta entidade produz %.2f de Oxigênio.",
 		nutrient_value     = "Esta entidade produz %.2f de Nutrientes.",
+		produces_herbivore = "Esta entidade fornece %.2f de Nutrientes Herbívoros.",
+		produces_carnivore = "Esta entidade fornece %.2f de Nutrientes Carnívoros.",
 	}
 	-- Janela
 	self.spawnWindow = {
@@ -147,10 +179,15 @@ function world:load(saveMeta)
 		maxScroll = 0,
 		closeButton = nil,
 		tabs = { "Peixes", "Plantas", "Cardumes" },
+		lastTab = 1,
 		currentTab = 1,
 		entityList = {},   -- Para armazenar as entidades carregadas
 		selectedEntity = nil -- Entidade selecionada para spawn
 	}
+	self.spawnWindow.listX = self.spawnWindow.x + 10
+	self.spawnWindow.listY = self.spawnWindow.y + 90
+	self.spawnWindow.listW = self.spawnWindow.w - 20
+	self.spawnWindow.listH = self.spawnWindow.h - 140
 
 	self.spawnWindow.infoWindow = {
 		visible = false,
@@ -220,13 +257,15 @@ function world:load(saveMeta)
 		30,
 		function()
 			local ent = self.spawnWindow.selectedEntity
-			if not ent then return end
+			if not ent or ent == nil then return end
 
 			if self:canAffordAndConsume(ent) then
 				if self.spawnWindow.currentTab == 1 then
 					self:spawnFish(ent) -- Peixes
 				elseif self.spawnWindow.currentTab == 2 then
-					self:spawnPlant(ent) -- Plantas  ←  NEW
+					self:spawnPlant(ent) -- Plantas
+				elseif self.spawnWindow.currentTab == 3 then
+					self:spawnShoal(ent) -- Cardumes
 				end
 			else
 				self.canAffordFeedback = UI.newMessage("Recursos insuficientes para invocar " .. ent.name, self.messageFont)
@@ -277,7 +316,7 @@ function world:unload()
 		end
 		self.saveData.fish = fishCount
 
-		-- plantas (produtores)
+		-- plantas e cardumes (produtores)
 		local prod = {}
 		for _, p in ipairs(self.plantList) do
 			table.insert(prod, {
@@ -288,6 +327,17 @@ function world:unload()
 				size  = p.size
 			})
 		end
+
+		for _, s in ipairs(self.shoalList) do
+			table.insert(prod, {
+				id    = s.id,
+				-- grava os percentuais já arredondados (já estão em 3 decimais)
+				normX = s.normX,
+				normY = s.normY,
+				size  = s.size
+			})
+		end
+
 		self.saveData.producers = prod
 
 		-- lixos
@@ -326,29 +376,34 @@ end
 
 -- Função para carregar entidades de acordo com a aba selecionada
 function world:loadEntitiesForTab(tabIndex)
+	self.spawnWindow.lastTab = self.spawnWindow.currentTab
 	self.spawnWindow.currentTab = tabIndex
-	if tabIndex == 1 then            -- Aba "Peixes"
+	self.spawnWindow.infoButtons = {}
+	if tabIndex == 1 then                                        -- Aba "Peixes"
 		self.spawnWindow.entityList = entitiesManager.getFishList()
-	elseif tabIndex == 2 then        -- Aba "Plantas"
+	elseif tabIndex == 2 then                                    -- Aba "Plantas"
 		self.spawnWindow.entityList = entitiesManager.getPlantList()
-	elseif tabIndex == 3 then        -- Aba "Cardumes"
-		self.spawnWindow.entityList = {} -- Implementar quando tiver
+	elseif tabIndex == 3 then                                    -- Aba "Cardumes"
+		self.spawnWindow.entityList = entitiesManager.getShoalList() -- Implementar quando tiver
 	end
+	self.spawnWindow.selectedEntity = self.spawnWindow.entityList[1] -- Seleciona a primeira entidade por padrão
 end
 
 -- Função para verificar e também deduzir/acrescentar recursos por entidade
 function world:canAffordAndConsume(entity)
 	local data = assert(self.saveData, "Save data não carregado.")
 
-	if entity.diet then
-		if not entity.oxygen_cost or not entity.nutrient_cost then
-			return false
-		end
+	-- ========= CHECAGEM =========
 
-		if data.oxygen < entity.oxygen_cost then
-			return false
-		end
+	if entity.oxygen_cost and data.oxygen < entity.oxygen_cost then
+		return false
+	end
 
+	if entity.organic_cost and data.organic_matter < entity.organic_cost then
+		return false
+	end
+
+	if entity.nutrient_cost and entity.diet then
 		if entity.diet == "herbivore" then
 			if data.food.herbivore < entity.nutrient_cost then return false end
 		elseif entity.diet == "carnivore" then
@@ -356,43 +411,19 @@ function world:canAffordAndConsume(entity)
 		else
 			return false
 		end
+	end
 
+	-- ========= CONSUMO =========
+
+	if entity.oxygen_cost then
 		data.oxygen = data.oxygen - entity.oxygen_cost
-
-		if entity.diet == "herbivore" then
-			data.food.herbivore = data.food.herbivore - entity.nutrient_cost
-		else
-			data.food.carnivore = data.food.carnivore - entity.nutrient_cost
-		end
-
-		if entity.organic_cost then
-			if data.organic_matter < entity.organic_cost then return false end
-			data.organic_matter = data.organic_matter - entity.organic_cost
-		end
-
-		return true
 	end
 
-	if entity.organic_cost and data.organic_matter < entity.organic_cost then
-		return false
+	if entity.organic_cost then
+		data.organic_matter = data.organic_matter - entity.organic_cost
 	end
 
-	if entity.oxygen_cost and data.oxygen < entity.oxygen_cost then
-		return false
-	end
-
-	if entity.nutrient_cost then
-		if entity.diet == "herbivore" and data.food.herbivore < entity.nutrient_cost then
-			return false
-		elseif entity.diet == "carnivore" and data.food.carnivore < entity.nutrient_cost then
-			return false
-		end
-	end
-
-	-- Consumo
-	if entity.organic_cost then data.organic_matter = data.organic_matter - entity.organic_cost end
-	if entity.oxygen_cost then data.oxygen = data.oxygen - entity.oxygen_cost end
-	if entity.diet and entity.nutrient_cost then
+	if entity.nutrient_cost and entity.diet then
 		if entity.diet == "herbivore" then
 			data.food.herbivore = data.food.herbivore - entity.nutrient_cost
 		else
@@ -400,12 +431,18 @@ function world:canAffordAndConsume(entity)
 		end
 	end
 
-	-- Produção
+	-- ========= PRODUÇÃO =========
+
 	if entity.oxygen_production then
 		data.oxygen = data.oxygen + entity.oxygen_production
 	end
-	if entity.nutrient_value then
-		data.food.herbivore = data.food.herbivore + entity.nutrient_value
+
+	if entity.nutrient_value and entity.produces then
+		if entity.produces == "herbivore" then
+			data.food.herbivore = data.food.herbivore + entity.nutrient_value
+		elseif entity.produces == "carnivore" then
+			data.food.carnivore = data.food.carnivore + entity.nutrient_value
+		end
 	end
 
 	return true
@@ -449,19 +486,18 @@ function world:spawnPlant(entity)
 		self.saveData.unlocked_info[entity.id] = true
 	end
 
-	local groundY = wh * 0.80
-	local minY    = groundY - 20
-	local maxY    = groundY + 90
-
+	local groundY                   = wh * 0.80
+	local minY                      = groundY - 20
+	local maxY                      = groundY + 90
 
 	local entityWidth, entityHeight = entity.w, entity.h
 
-	local x, y = self:randomGroundPos(minY, maxY)
+	local x, y                      = self:randomGroundPos(minY, maxY)
 
-	local normX = round3(x / ww) -- 0.000 – 1.000
-	local normY = round3(y / wh)
+	local normX                     = round3(x / ww) -- 0.000 – 1.000
+	local normY                     = round3(y / wh)
 
-	local plant = {
+	local plant                     = {
 		id     = entity.id,
 		name   = entity.name,
 		-- guardamos os percentuais, ain ain
@@ -485,6 +521,49 @@ function world:spawnPlant(entity)
 	end
 
 	table.insert(self.plantList, plant)
+end
+
+-- Função para invocar um cardume no mundo
+function world:spawnShoal(entity)
+	if not self.saveData.unlocked_info[entity.id] then
+		self.saveData.unlocked_info[entity.id] = true
+	end
+
+	local groundY                   = wh * 0.80
+	local minY                      = groundY - 90
+	local maxY                      = groundY + 20
+
+	local entityWidth, entityHeight = entity.w, entity.h
+
+	local x, y                      = self:randomGroundPos(minY, maxY)
+
+	local normX                     = round3(x / ww) -- 0.000 – 1.000
+	local normY                     = round3(y / wh)
+
+	local shoal                     = {
+		id     = entity.id,
+		name   = entity.name,
+		-- guardamos os percentuais, ain ain
+		normX  = normX,
+		normY  = normY,
+		-- manter as coordenadas “reais” por conveniência, por enquanto..
+		x      = x,
+		y      = y,
+		size   = entity.size,
+		width  = entityWidth,
+		height = entityHeight,
+		sprite = love.graphics.newImage("assets/sprites/" .. entity.sprite),
+		quads  = {}
+	}
+
+	for i = 1, (entity.frames or 1) do
+		local quad = love.graphics.newQuad((i - 1) * entityWidth, 0,
+			entityWidth, entityHeight,
+			shoal.sprite:getDimensions())
+		table.insert(shoal.quads, quad)
+	end
+
+	table.insert(self.shoalList, shoal)
 end
 
 -- Função para invocar um peixe no mundo
@@ -639,6 +718,38 @@ function world:drawPlants()
 	end
 end
 
+-- Função para desenhar os cardumes
+function world:drawShoals()
+	for _, shoal in ipairs(self.shoalList) do
+		love.graphics.setColor(self.ambientColor[1], self.ambientColor[2], self.ambientColor[3], 0.9)
+
+		love.graphics.push()
+		love.graphics.translate(shoal.x, shoal.y)
+		love.graphics.rotate(shoal.currentTilt or 0)
+
+		if #shoal.quads > 0 then
+			love.graphics.draw(
+				shoal.sprite,
+				shoal.quads[1],
+				0, 0,
+				0,
+				shoal.size, shoal.size,
+				shoal.width / 2, shoal.height / 2
+			)
+		else
+			love.graphics.draw(
+				shoal.sprite,
+				0, 0,
+				0,
+				shoal.size, shoal.size,
+				shoal.width / 2, shoal.height / 2
+			)
+		end
+
+		love.graphics.pop()
+	end
+end
+
 -- Função para desenhar os peixes
 function world:drawFish()
 	for _, fish in ipairs(self.fishList) do
@@ -726,6 +837,7 @@ function world:spawnWindow_drawInfoButton(textH, drawX, drawY, contentW, topHeig
 
 	if not btn then
 		btn = UI.newButton("ℹ", infoX, infoY, infoSize, infoSize, function()
+			-- Lógica do botão de informação
 			if self.spawnWindow.infoWindow.text == block.entity.curiosity then
 				-- fechar janela se já estiver aberta com o mesmo texto
 				self.spawnWindow.infoWindow.visible = false
@@ -856,42 +968,64 @@ function world:spawnWindow_drawBlock(block, drawX, drawY, innerPad, listW, font,
 			or (block.entity.diet == "carnivore" or block.entity.diet == "carn") and carnColor
 			or { 1, 1, 0 }
 
-	if block.entity.oxygen_cost then
+	if block.entity.oxygen_cost then -- Quando é um peixe ou cardume
 		addNum(block.entity.oxygen_cost, oxColor, "oxygen_cost")
 		addNum(block.entity.nutrient_cost, nutrientColor, "nutrient_cost")
-		addNum(block.entity.organic_production, organicColor, "organic_production")
-	elseif block.entity.oxygen_production then
+		if block.entity.organic_production then
+			addNum(block.entity.organic_production, organicColor, "organic_production")
+		else
+			addNum(block.entity.nutrient_value, carnColor, "produces_carnivore")
+		end
+	elseif block.entity.oxygen_production then -- Quando é uma planta
 		addNum(block.entity.oxygen_production, oxColor, "oxygen_production")
 		addNum(block.entity.nutrient_value, nutrientColor, "nutrient_value")
 		addNum(block.entity.organic_cost, organicColor, "organic_cost")
 	end
 
+	-- Colorir números
 	local lineList = type(lines) == "table" and lines or wrapped
-	for lineIndex, lineText in ipairs(lineList) do
-		for _, pair in ipairs(nums) do
-			local numStr, color = pair[1], pair[2]
-			local s = string.find(lineText, numStr, 1, true)
-			if s then
-				local before = lineText:sub(1, s - 1)
-				local xOff = font:getWidth(before)
-				local yOff = (lineIndex - 1) * font:getHeight()
 
-				local px = descX + xOff
-				local py = descY + yOff
+	local pending = {}
+	for i, v in ipairs(nums) do
+		pending[i] = v
+	end
+
+	for lineIndex, lineText in ipairs(lineList) do
+		local lastOccurrence = 1
+
+		local i = 1
+		while i <= #pending do
+			local pair = pending[i]
+			local numStr, color = pair[1], pair[2]
+
+			local s, e = string.find(lineText, numStr, lastOccurrence, true)
+			if s then
+				lastOccurrence = e + 1
+
+				local before   = lineText:sub(1, s - 1)
+				local xOff     = font:getWidth(before)
+				local yOff     = (lineIndex - 1) * font:getHeight()
+
+				local px       = descX + xOff
+				local py       = descY + yOff
 
 				love.graphics.setColor(color)
-				love.graphics.print(numStr, descX + xOff, descY + yOff)
+				love.graphics.print(numStr, px, py)
 
-				-- REGISTRA O HITBOX DO NÚMERO
 				table.insert(self.spawnWindow.coloredNumbers, {
 					x = px,
 					y = py,
 					w = font:getWidth(numStr),
 					h = font:getHeight(),
-					value = numStr,            -- valor
-					color = color,             -- cor do número (removível caso a gente acabe não usando)
-					category = pair[3] or "unknown" -- o mais importante (depois da hitbox)
+					value = numStr,
+					color = color,
+					category = pair[3] or "unknown"
 				})
+
+				-- resolve duplicatas de nums de valores iguais
+				table.remove(pending, i)
+			else
+				i = i + 1
 			end
 		end
 	end
@@ -905,13 +1039,13 @@ function world:spawnWindow_computeBlocks(listW, innerPad, blockSpacing, font)
 
 	for _, entity in ipairs(self.spawnWindow.entityList) do
 		local desc = ""
-		if entity.oxygen_cost then
+		if entity.oxygen_cost then -- Peixe ou cardume
 			desc = string.format(entity.description or "",
 				entity.oxygen_cost,
 				entity.nutrient_cost or 0,
-				entity.organic_production or 0
+				entity.organic_production or entity.nutrient_value or 0
 			)
-		elseif entity.oxygen_production then
+		elseif entity.oxygen_production then -- Planta
 			desc = string.format(entity.description or "",
 				entity.oxygen_production,
 				entity.nutrient_value or 0,
@@ -1080,10 +1214,10 @@ function world:drawSpawnWindow()
 	self:spawnWindow_drawBackground(x0, y0, w0, h0)
 	self:spawnWindow_drawTabsAndButtons()
 
-	local listX = x0 + 10
-	local listY = y0 + 90
-	local listW = w0 - 20
-	local listH = h0 - 140
+	local listX = self.spawnWindow.listX
+	local listY = self.spawnWindow.listY
+	local listW = self.spawnWindow.listW
+	local listH = self.spawnWindow.listH
 
 	love.graphics.setColor(0.2, 0.2, 0.2, 0.8)
 	love.graphics.rectangle("fill", listX, listY, listW, listH, 8, 8)
@@ -1315,6 +1449,8 @@ function world:draw()
 
 	-- Desenhar plantas
 	self:drawPlants()
+	-- Desenhar cardumes
+	self:drawShoals()
 	-- Desenhar peixes
 	self:drawFish()
 	-- Desenhar lixos
@@ -1478,13 +1614,17 @@ function world:mousepressed(x, y, button)
 
 		-- clique em um bloco renderizado (respeita scroll porque hitbox foi calculada com drawY+scrollY)
 		if button == 1 and not self.spawnWindow.spawnEntityButton.hovered and self.spawnWindow.renderedBlocks then
-			-- converte coords do mouse para o sistema UI (igual usado no draw)
-			for _, rb in ipairs(self.spawnWindow.renderedBlocks) do
-				local hb = rb.hitbox
-				if x >= hb.x and x <= hb.x + hb.w and y >= hb.y and y <= hb.y + hb.h then
-					-- selecionou corretamente o entity daquele bloco
-					self.spawnWindow.selectedEntity = rb.entity
-					return
+			-- verifica se está dentro da lista dos blocos
+			if not (x < self.spawnWindow.listX or x > self.spawnWindow.listX + self.spawnWindow.listW or
+					y < self.spawnWindow.listY or y > self.spawnWindow.listY + self.spawnWindow.listH) then
+				-- converte coords do mouse para o sistema UI (igual usado no draw)
+				for _, rb in ipairs(self.spawnWindow.renderedBlocks) do
+					local hb = rb.hitbox
+					if x >= hb.x and x <= hb.x + hb.w and y >= hb.y and y <= hb.y + hb.h then
+						-- selecionou corretamente o entity daquele bloco
+						self.spawnWindow.selectedEntity = rb.entity
+						return
+					end
 				end
 			end
 		end

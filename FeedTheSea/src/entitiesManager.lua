@@ -36,6 +36,17 @@ function entitiesManager.getPlantById(id)
     return nil
 end
 
+-- Obtém os dados de uma planta pelo seu ID
+function entitiesManager.getShoalById(id)
+    local entities = assert(entitiesManager.loadEntities(), "Erro ao obter entidades")
+    local shoal = entities.shoal and entities.shoal[id]
+    if shoal then
+			shoal.id = id
+			return shoal
+    end
+    return nil
+end
+
 -- Carrega o arquivo entities.json e retorna a tabela de dados
 function entitiesManager.loadEntities()
 	local fileContent = love.filesystem.read("data/entities.json")
@@ -81,6 +92,24 @@ function entitiesManager.getPlantList()
 	end)
 
 	return plantList
+end
+
+-- Retorna a lista completa de plantas existentes
+function entitiesManager.getShoalList()
+	local entities = assert(entitiesManager.loadEntities(), "Erro ao obter entidades")
+	local shoalList = {}
+
+	-- Iterar sobre os cardumes na estrutura existente
+	for shoalId, shoalData in pairs(entities.shoal or {}) do
+		shoalData.id = shoalId -- Adicionar o ID ao objeto
+		table.insert(shoalList, shoalData)
+	end
+
+	table.sort(shoalList, function(a, b)
+		return a.id < b.id
+	end)
+
+	return shoalList
 end
 
 -- Retorna a lista completa de lixos existentes
