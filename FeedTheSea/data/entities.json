@@ -47,10 +47,24 @@
 			"oxygen_production": 1,
 			"nutrient_value": 0.5,
 			"organic_cost": 2.5,
-			"size": 0.35,
+			"size": 0.4,
 			"limit": 8,
-			"w": 380,
-			"h": 387
+			"w": 296,
+			"h": 511
+		},
+		"plant002": {
+			"name": "Capim-marinho",
+			"sprite": "seagrass.png",
+			"description": "Planta aquática densa que melhora a oxigenação do ambiente (%.2f) e fornece bons nutrientes para herbívoros (%.2f), ajudando a sustentar peixes maiores, mas exigindo um consumo elevado de matéria orgânica (%.2f).",
+			"curiosity": "Capins-marinhos formam verdadeiros berçários naturais para cardumes e ajudam a estabilizar o ecossistema.",
+			"produces": "herbivore",
+			"oxygen_production": 1.8,
+			"nutrient_value": 0.9,
+			"organic_cost": 4.5,
+			"size": 0.30,
+			"limit": 5,
+			"w": 391,
+			"h": 416
 		}
 	},
 	"shoal": {
