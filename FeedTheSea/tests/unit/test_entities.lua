@@ -152,5 +152,16 @@ function TestEntities:testLoadEntitiesFileNotFound()
     luaunit.assertStrContains(tostring(err), "entities.json")
 end
 
+-- Falha ao carregar JSON malformado
+function TestEntities:testLoadEntitiesMalformedJson()
+    fake_fs["data/entities.json"] = "{ INVALID JSON }"
+
+    local ok = pcall(function()
+        entities.loadEntities()
+    end)
+
+    luaunit.assertFalse(ok)
+end
+
 -- Executa os testes
 os.exit(luaunit.LuaUnit.run())
