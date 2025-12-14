@@ -1,22 +1,22 @@
 -- world.lua
-local UI               = require("src.ui")
-local sceneManager     = require("src.sceneManager")
-local savesManager     = require("src.savesManager")
-local entitiesManager  = require("src.entitiesManager")
+local UI                  = require("src.ui")
+local sceneManager        = require("src.sceneManager")
+local savesManager        = require("src.savesManager")
+local entitiesManager     = require("src.entitiesManager")
 
-local world            = {}
+local world               = {}
 
-local ww, wh           = UI.getDimensions()
+local ww, wh              = UI.getDimensions()
 
 -- Tabelas para armazenar as entidades no mundo
-world.fishList         = {}
-world.plantList        = {}
-world.shoalList        = {}
-world.wasteList        = {}
+world.fishList            = {}
+world.plantList           = {}
+world.shoalList           = {}
+world.wasteList           = {}
 
-world.draggedPlant     = nil
-world.dragPlantOffsetX = 0
-world.dragPlantOffsetY = 0
+world.draggedProducer     = nil
+world.dragProducerOffsetX = 0
+world.dragProducerOffsetY = 0
 
 local function round3(v)                  -- Esta função auxiliar irá arredondar as porcentagens para termos alta precisão
 	return math.floor(v * 1000 + 0.5) / 1000 -- 0.5 para arredondar corretamente
@@ -128,7 +128,7 @@ function world:load(saveMeta)
 		end
 	end
 
-	self:bringPlantsBack()
+	self:bringProducersBack()
 
 	for _, waste in ipairs(self.saveData.waste or {}) do
 		local ent = entitiesManager.getWasteById(waste.id)
@@ -379,12 +379,12 @@ function world:loadEntitiesForTab(tabIndex)
 	self.spawnWindow.lastTab = self.spawnWindow.currentTab
 	self.spawnWindow.currentTab = tabIndex
 	self.spawnWindow.infoButtons = {}
-	if tabIndex == 1 then                                        -- Aba "Peixes"
+	if tabIndex == 1 then                                           -- Aba "Peixes"
 		self.spawnWindow.entityList = entitiesManager.getFishList()
-	elseif tabIndex == 2 then                                    -- Aba "Plantas"
+	elseif tabIndex == 2 then                                       -- Aba "Plantas"
 		self.spawnWindow.entityList = entitiesManager.getPlantList()
-	elseif tabIndex == 3 then                                    -- Aba "Cardumes"
-		self.spawnWindow.entityList = entitiesManager.getShoalList() -- Implementar quando tiver
+	elseif tabIndex == 3 then                                       -- Aba "Cardumes"
+		self.spawnWindow.entityList = entitiesManager.getShoalList()  -- Implementar quando tiver
 	end
 	self.spawnWindow.selectedEntity = self.spawnWindow.entityList[1] -- Seleciona a primeira entidade por padrão
 end
@@ -541,22 +541,23 @@ function world:spawnShoal(entity)
 	local normY                     = round3(y / wh)
 
 	local shoal                     = {
-		id     = entity.id,
-		name   = entity.name,
+		id        = entity.id,
+		name      = entity.name,
 		-- guardamos os percentuais, ain ain
-		normX  = normX,
-		normY  = normY,
+		normX     = normX,
+		normY     = normY,
 		-- manter as coordenadas “reais” por conveniência, por enquanto..
-		x      = x,
-		y      = y,
-		size   = entity.size,
-		width  = entityWidth,
-		height = entityHeight,
-		sprite = love.graphics.newImage("assets/sprites/" .. entity.sprite),
-		quads  = {}
+		x         = x,
+		y         = y,
+		size      = entity.size,
+		width     = entityWidth,
+		height    = entityHeight,
+		animation = { currentFrame = 1, timer = 0, frameDuration = 0.1 },
+		sprite    = love.graphics.newImage("assets/sprites/" .. entity.sprite),
+		quads     = {}
 	}
 
-	for i = 1, (entity.frames or 1) do
+	for i = 1, 6 do
 		local quad = love.graphics.newQuad((i - 1) * entityWidth, 0,
 			entityWidth, entityHeight,
 			shoal.sprite:getDimensions())
@@ -686,6 +687,22 @@ function world:updateFishAnimations(dt)
 	end
 end
 
+-- Função para atualizar animações dos peixes
+function world:updateShoalAnimations(dt)
+	for _, shoal in ipairs(self.shoalList) do
+		-- Atualizar animação
+		local frameSpeed = 0.25
+		shoal.animation.timer = shoal.animation.timer + dt
+		if shoal.animation.timer >= frameSpeed then
+			shoal.animation.timer = 0
+			shoal.animation.currentFrame = shoal.animation.currentFrame + 1
+			if shoal.animation.currentFrame > 6 then
+				shoal.animation.currentFrame = 1
+			end
+		end
+	end
+end
+
 -- Função para desenhar as plantas
 function world:drawPlants()
 	for _, plant in ipairs(self.plantList) do
@@ -721,30 +738,20 @@ end
 -- Função para desenhar os cardumes
 function world:drawShoals()
 	for _, shoal in ipairs(self.shoalList) do
-		love.graphics.setColor(self.ambientColor[1], self.ambientColor[2], self.ambientColor[3], 0.9)
+		love.graphics.setColor(self.ambientColor[1], self.ambientColor[2], self.ambientColor[3], 0.85)
 
 		love.graphics.push()
 		love.graphics.translate(shoal.x, shoal.y)
 		love.graphics.rotate(shoal.currentTilt or 0)
 
-		if #shoal.quads > 0 then
-			love.graphics.draw(
-				shoal.sprite,
-				shoal.quads[1],
-				0, 0,
-				0,
-				shoal.size, shoal.size,
-				shoal.width / 2, shoal.height / 2
-			)
-		else
-			love.graphics.draw(
-				shoal.sprite,
-				0, 0,
-				0,
-				shoal.size, shoal.size,
-				shoal.width / 2, shoal.height / 2
-			)
-		end
+		love.graphics.draw(
+			shoal.sprite,
+			shoal.quads[shoal.animation.currentFrame],
+			0, 0,
+			0,
+			shoal.size, shoal.size,
+			shoal.width / 2, shoal.height / 2
+		)
 
 		love.graphics.pop()
 	end
@@ -1268,11 +1275,13 @@ end
 
 --#endregion
 
--- Função para retornar plantas indevidamente fora do espaço de jogo
-function world:bringPlantsBack()
-	-- Função irá iterar sobre as plantas e verificar se estão fora dos limites do mundo.
+-- Função para retornar produtores indevidamente fora do espaço de jogo
+function world:bringProducersBack()
+	-- Função irá iterar sobre os produtores e verificar se estão fora dos limites do mundo.
 	-- Se estiverem, reposicioná-las com os mesmos parâmetros de spawn.
 	-- Só deve ser chamada no :load() e após movê-las.
+
+	-- Plantas
 	for _, plant in ipairs(self.plantList) do
 		if plant.x < 0 or plant.x > ww or plant.y < self.topBarHeight or plant.y > wh then
 			-- Reposicionar
@@ -1286,6 +1295,23 @@ function world:bringPlantsBack()
 			plant.y       = y
 			plant.normX   = round3(x / ww)
 			plant.normY   = round3(y / wh)
+		end
+	end
+
+	-- Cardumes
+	for _, shoal in ipairs(self.shoalList) do
+		if shoal.x < 0 or shoal.x > ww or shoal.y < self.topBarHeight or shoal.y > wh then
+			-- Reposicionar
+			local groundY = wh * 0.80
+			local minY    = groundY - 90
+			local maxY    = groundY + 20
+
+			local x, y    = self:randomGroundPos(minY, maxY)
+
+			shoal.x       = x
+			shoal.y       = y
+			shoal.normX   = round3(x / ww)
+			shoal.normY   = round3(y / wh)
 		end
 	end
 end
@@ -1401,6 +1427,9 @@ function world:update(dt)
 
 	-- Atualizar animações dos peixes
 	self:updateFishAnimations(dt)
+
+	-- Atualizar animações das sardinhas
+	self:updateShoalAnimations(dt)
 end
 
 function world:draw()
@@ -1546,9 +1575,9 @@ function world:mousemoved(x, y)
 		UI.updateButtonHover(btn.button, x, y)
 	end
 
-	if self.draggedPlant then
-		self.draggedPlant.x = x - self.dragPlantOffsetX
-		self.draggedPlant.y = y - self.dragPlantOffsetY
+	if self.draggedProducer then
+		self.draggedProducer.x = x - self.dragProducerOffsetX
+		self.draggedProducer.y = y - self.dragProducerOffsetY
 	end
 
 	if self.spawnWindow.visible then
@@ -1591,9 +1620,21 @@ function world:mousepressed(x, y, button)
 			local plant = self.plantList[i]
 			local radius = plant.size * 0.5 * math.max(plant.width, plant.height)
 			if (x - plant.x) ^ 2 + (y - plant.y) ^ 2 <= radius ^ 2 then
-				self.draggedPlant = plant
-				self.dragPlantOffsetX = x - plant.x
-				self.dragPlantOffsetY = y - plant.y
+				self.draggedProducer = plant
+				self.dragProducerOffsetX = x - plant.x
+				self.dragProducerOffsetY = y - plant.y
+				break
+			end
+		end
+
+		-- Verificar clique em cardumes para arrastar
+		for i = #self.shoalList, 1, -1 do
+			local shoal = self.shoalList[i]
+			local radius = shoal.size * 0.5 * math.max(shoal.width, shoal.height)
+			if (x - shoal.x) ^ 2 + (y - shoal.y) ^ 2 <= radius ^ 2 then
+				self.draggedProducer = shoal
+				self.dragProducerOffsetX = x - shoal.x
+				self.dragProducerOffsetY = y - shoal.y
 				break
 			end
 		end
@@ -1616,7 +1657,7 @@ function world:mousepressed(x, y, button)
 		if button == 1 and not self.spawnWindow.spawnEntityButton.hovered and self.spawnWindow.renderedBlocks then
 			-- verifica se está dentro da lista dos blocos
 			if not (x < self.spawnWindow.listX or x > self.spawnWindow.listX + self.spawnWindow.listW or
-					y < self.spawnWindow.listY or y > self.spawnWindow.listY + self.spawnWindow.listH) then
+						y < self.spawnWindow.listY or y > self.spawnWindow.listY + self.spawnWindow.listH) then
 				-- converte coords do mouse para o sistema UI (igual usado no draw)
 				for _, rb in ipairs(self.spawnWindow.renderedBlocks) do
 					local hb = rb.hitbox
@@ -1633,11 +1674,11 @@ end
 
 function world:mousereleased(x, y, button)
 	if button == 1 then
-		if self.draggedPlant then
-			self.draggedPlant.normX = round3(self.draggedPlant.x / ww)
-			self.draggedPlant.normY = round3(self.draggedPlant.y / wh)
-			self.draggedPlant = nil
-			self:bringPlantsBack()
+		if self.draggedProducer then
+			self.draggedProducer.normX = round3(self.draggedProducer.x / ww)
+			self.draggedProducer.normY = round3(self.draggedProducer.y / wh)
+			self.draggedProducer = nil
+			self:bringProducersBack()
 		end
 	end
 end

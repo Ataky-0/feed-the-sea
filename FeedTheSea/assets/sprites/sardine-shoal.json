@@ -1,0 +1,62 @@
+{ "frames": {
+   "sardine-shoal 0.ase": {
+    "frame": { "x": 0, "y": 0, "w": 270, "h": 450 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 270, "h": 450 },
+    "sourceSize": { "w": 270, "h": 450 },
+    "duration": 100
+   },
+   "sardine-shoal 1.ase": {
+    "frame": { "x": 270, "y": 0, "w": 270, "h": 450 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 270, "h": 450 },
+    "sourceSize": { "w": 270, "h": 450 },
+    "duration": 100
+   },
+   "sardine-shoal 2.ase": {
+    "frame": { "x": 540, "y": 0, "w": 270, "h": 450 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 270, "h": 450 },
+    "sourceSize": { "w": 270, "h": 450 },
+    "duration": 100
+   },
+   "sardine-shoal 3.ase": {
+    "frame": { "x": 810, "y": 0, "w": 270, "h": 450 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 270, "h": 450 },
+    "sourceSize": { "w": 270, "h": 450 },
+    "duration": 100
+   },
+   "sardine-shoal 4.ase": {
+    "frame": { "x": 1080, "y": 0, "w": 270, "h": 450 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 270, "h": 450 },
+    "sourceSize": { "w": 270, "h": 450 },
+    "duration": 100
+   },
+   "sardine-shoal 5.ase": {
+    "frame": { "x": 1350, "y": 0, "w": 270, "h": 450 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 270, "h": 450 },
+    "sourceSize": { "w": 270, "h": 450 },
+    "duration": 100
+   }
+ },
+ "meta": {
+  "app": "https://github.com/LibreSprite/LibreSprite/",
+  "version": "1.2-dev",
+  "image": "sardine-shoal.png",
+  "format": "RGBA8888",
+  "size": { "w": 1620, "h": 450 },
+  "scale": "1",
+  "frameTags": [
+   { "name": "idle", "from": 0, "to": 5, "direction": "forward" }
+  ]
+ }
+}
