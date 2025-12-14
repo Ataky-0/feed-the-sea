@@ -12,19 +12,37 @@ local fake_fs = {}
 _G.love = {
     filesystem = {
         createDirectory = function(_) end,
-        getInfo = function(path) return fake_fs[path] and { type = "file" } or nil end,
+        getInfo = function(path)
+            return fake_fs[path] and { type = "file" } or nil
+        end,
         write = function(path, data)
             fake_fs[path] = data
             return true
         end,
-        read = function(path) return fake_fs[path] end,
-        remove = function(path) fake_fs[path] = nil end,
-        getSaveDirectory = function() return "." end
+        read = function(path)
+            return fake_fs[path]
+        end,
+        remove = function(path)
+            fake_fs[path] = nil
+        end,
+        getSaveDirectory = function()
+            return "."
+        end
     }
 }
 
--- Mock do arquivo entities.json
-fake_fs["data/entities.json"] = [[
+-- Importa módulos
+local luaunit = require("luaunit")     -- framework de testes
+local entities = require("entitiesManager")  -- módulo local em src/entitiesManager.lua
+
+-- Define testes
+TestEntities = {}
+
+-- Executado antes de CADA teste
+function TestEntities:setUp()
+    fake_fs = {}
+
+    fake_fs["data/entities.json"] = [[
     {
         "fish": {
             "fish001": {
@@ -49,14 +67,9 @@ fake_fs["data/entities.json"] = [[
                 "h": 387
             }
         }
-    }]]
-
--- Importa módulos
-local luaunit = require("luaunit")     -- framework de testes
-local entities = require("entitiesManager")  -- módulo local em src/entitiesManager.lua
-
--- Define testes
-TestEntities = {}
+    }
+    ]]
+end
 
 -- Carregamento das entidades
 function TestEntities:testLoadEntities()
@@ -73,7 +86,6 @@ function TestEntities:testLoadEntities()
     luaunit.assertIsTable(data)
     luaunit.assertNotNil(data.plant, "Os dados dos peixes devem estar presentes.")
     luaunit.assertEquals(data.plant['plant001'].name, "Alga")
-
 end
 
 -- obtenção de planta por ID
@@ -85,6 +97,7 @@ function TestEntities:testGetFishById()
     luaunit.assertIsTable(fish)
     luaunit.assertEquals(fish.name, "Sardinha")
     luaunit.assertEquals(fish.size, 0.5)
+    luaunit.assertEquals(fish.id, "fish001")
 
     -- verifica retorno para ID inexistente
     luaunit.assertIsNil(entities.getFishById("nonexistent_id"))
@@ -99,6 +112,7 @@ function TestEntities:testGetPlantById()
     luaunit.assertIsTable(plant)
     luaunit.assertEquals(plant.name, "Alga")
     luaunit.assertEquals(plant.size, 0.35)
+    luaunit.assertEquals(plant.id, "plant001")
 
     -- verifica retorno para ID inexistente
     luaunit.assertIsNil(entities.getPlantById("nonexistent_id"))
@@ -126,5 +140,17 @@ function TestEntities:testGetPlantList()
     luaunit.assertEquals(plantList[1].name, "Alga")
 end
 
--- Roda os testes
+-- Falha ao carregar entities.json inexistente
+function TestEntities:testLoadEntitiesFileNotFound()
+    fake_fs["data/entities.json"] = nil
+
+    local ok, err = pcall(function()
+        entities.loadEntities()
+    end)
+
+    luaunit.assertFalse(ok)
+    luaunit.assertStrContains(tostring(err), "entities.json")
+end
+
+-- Executa os testes
 os.exit(luaunit.LuaUnit.run())
