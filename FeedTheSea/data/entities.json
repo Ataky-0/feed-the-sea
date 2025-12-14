@@ -35,6 +35,18 @@
 			"nutrient_cost": 0.30,
 			"organic_production": 0.075,
 			"limit": 10
+		},
+		"fish004": {
+			"name": "Clownfish",
+			"sprite": "clownfish.png",
+			"diet": "herbivore",
+			"description": "O peixe-palhaço é um pequeno peixe colorido. Possui um baixo consumo de oxigênio (%.2f) e uma dieta baseada principalmente em plantas (%.2f). Sua produção de matéria orgânica (%.2f) é modesta, mas sua presença é importante para o equilíbrio do ecossistema marinho.",
+			"curiosity": "O peixe-palhaço vive em simbiose com anêmonas-do-mar, onde encontra proteção contra predadores em troca de alimentos que consome da anêmona.",
+			"size": 0.3,
+			"oxygen_cost": 0.25,
+			"nutrient_cost": 0.08,
+			"organic_production": 0.02,
+			"limit": 30
 		}
 	},
 	"plant": {

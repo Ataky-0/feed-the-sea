@@ -1320,7 +1320,7 @@ end
 function world:getMaxOrganicMatter()
 	-- Limite atual segue uma equação simples onde o valor de produção de matéria orgânica
 	-- * 10 define o limite máximo.
-	return self.fishOrganicMatterCurrentRate * 10
+	return math.max(2.5,self.fishOrganicMatterCurrentRate * 10)
 end
 
 function world:refreshFishOrganicRate()
@@ -1464,7 +1464,7 @@ function world:draw()
 	love.graphics.setColor(self.uiLabels.organic.color)
 	love.graphics.print(
 		string.format("%s: %.2f mg C (%s)", self.uiLabels.organic.label, self.saveData.organic_matter,
-			isOrganicMaxed and "Maxed" or string.format("x%.2f", self.fishOrganicMatterMultiplier)),
+			isOrganicMaxed and "Máximo" or string.format("x%.2f", self.fishOrganicMatterMultiplier)),
 		startX + spacing,
 		y1)
 
