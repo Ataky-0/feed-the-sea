@@ -74,6 +74,7 @@ function UI.newButton(text, x, y, w, h, action, font)
 		hovered = false,
 		action = action,
 		disabled = false,
+		sound = nil,
 		font = font or love.graphics.getFont()
 	}
 end
@@ -220,6 +221,16 @@ end
 -- Função pra processar clique
 function UI.clickButton(button, mouseButton)
 	if mouseButton == 1 and button.hovered and button.action and not button.disabled then
+		if button.sound then
+			local clickSound = love.audio.newSource(button.sound, "stream")
+			clickSound:setVolume(0.3)
+			love.audio.play(clickSound)
+		else
+			local clickSound = love.audio.newSource("assets/sounds/bubble-pop.ogg", "stream")
+			clickSound:setVolume(0.3)
+			love.audio.play(clickSound)
+		end
+
 		button.action()
 	end
 end

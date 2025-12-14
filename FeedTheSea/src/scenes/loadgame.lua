@@ -258,6 +258,8 @@ function loadgame:drawSaveCard(save, x, y, w, h)
 
 	if not save._loadBtn then
 		save._loadBtn = UI.newButton("Carregar", 0, 0, btnW, btnH, function()
+			print("Carregando save:", save.file)
+			-- Troca a cena para o mundo
 			sceneManager:changeScene("world", save)
 		end)
 

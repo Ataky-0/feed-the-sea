@@ -18,6 +18,11 @@ world.draggedProducer     = nil
 world.dragProducerOffsetX = 0
 world.dragProducerOffsetY = 0
 
+world.globalVolume = 0.6
+
+-- Visuais
+world.bubbles = {}
+
 local function round3(v)                  -- Esta função auxiliar irá arredondar as porcentagens para termos alta precisão
 	return math.floor(v * 1000 + 0.5) / 1000 -- 0.5 para arredondar corretamente
 end
@@ -32,7 +37,14 @@ function world:load(saveMeta)
 		error("Erro: save não pôde ser carregado.")
 	end
 
+	-- Visuais
+	self.bubbleTimer    = 0
+	self.bubbleInterval = 5
+
+	self.ambientSound = love.audio.newSource("assets/sounds/underwater_ambience.ogg", "stream")
 	self.ambientColor = { 235 / 255, 245 / 255, 250 / 255 }
+
+	self.ambientSound:setVolume(self.globalVolume)
 
 	--#region Converter save
 	-- Esta seção tem como objetivo converter saves antigos para novos formatos (aliado ao savesManager.normalizeSave)
@@ -57,6 +69,8 @@ function world:load(saveMeta)
 	self.wasteEventTimer = 0
 	self.wasteEventInterval = 90 -- 1 minuto e meio
 	self.wasteEventMaxAmount = (1 / self.fishOrganicMatterWasteImpact) * 2
+	self.wasteEventSound = love.audio.newSource("assets/sounds/boat-passing-by.ogg", "static")
+	self.wasteEventSound:setVolume(self.globalVolume * 0.7)
 
 	-- Imagem de fundo
 	self.background = love.graphics.newImage("assets/background.png")
@@ -372,6 +386,17 @@ function world:unload()
 
 	-- Limpar feedbacks (mensagens)
 	self.canAffordFeedback = nil
+
+	-- Limpar visuais
+	self.bubbles = {}
+
+	-- Parar som ambiente
+	love.audio.stop(self.ambientSound)
+	self.ambientSound = nil
+
+	-- Liberar som do evento de lixo
+	love.audio.stop(self.wasteEventSound)
+	self.wasteEventSound = nil
 end
 
 -- Função para carregar entidades de acordo com a aba selecionada
@@ -576,7 +601,7 @@ function world:spawnFish(entity)
 	local fish = {
 		id = entity.id,
 		name = entity.name,
-		x = math.random(100, ww - 100),
+		x = math.random(128, ww - 128),
 		y = math.random(self.topBarHeight + 128, wh - (self.topBarHeight + 128)),
 		size = entity.size,
 		width = 128,
@@ -646,6 +671,49 @@ function world:spawnWaste(entity)
 	end
 
 	table.insert(self.wasteList, waste)
+end
+
+-- Função para invocar uma bolha no mundo
+function world:spawnBubble()
+	-- A bolha começará abaixo da tela e irá até o topo
+	-- Posição X aleatória
+	-- Velocidade aleatória
+	local bubble = {
+		x = math.random(50, ww - 50),
+		y = wh + 24,
+		velocityY = math.random(40, 80),
+		width = 24,
+		height = 24,
+		sprite = love.graphics.newImage("assets/sprites/bubble.png"),
+		size = math.random(4, 9) / 10
+	}
+
+	table.insert(self.bubbles, bubble)
+end
+
+-- Função para movimentar as bolhas para cima
+function world:updateBubbles(dt)
+	if not self.bubbles then return end
+	-- Atualizar timer e spawnar bolhas
+	self.bubbleTimer = self.bubbleTimer + dt
+	if self.bubbleTimer >= self.bubbleInterval then
+		self.bubbleTimer = 0
+		self:spawnBubble()
+	end
+
+	-- Atualizar posição das bolhas
+	for i = #self.bubbles, 1, -1 do
+		local bubble = self.bubbles[i]
+		bubble.y = bubble.y - bubble.velocityY * dt
+
+		-- Zigue-zague
+		bubble.x = bubble.x + math.sin(love.timer.getTime() * 3 + i) * 10 * dt
+
+		-- Remover bolha se sair da tela
+		if bubble.y + bubble.height < 0 then
+			table.remove(self.bubbles, i)
+		end
+	end
 end
 
 -- Função para atualizar animações dos peixes
@@ -802,6 +870,27 @@ function world:drawWaste()
 	end
 end
 
+-- Função para desenhar bolhas
+function world:drawBubbles()
+	if not self.bubbles then return end
+	for _, bubble in ipairs(self.bubbles) do
+		love.graphics.setColor(1, 1, 1, 1)
+		love.graphics.push()
+
+		love.graphics.translate(bubble.x, bubble.y)
+
+		love.graphics.draw(
+			bubble.sprite,
+			0, 0,
+			0,
+			bubble.size, bubble.size,
+			bubble.width / 2, bubble.height / 2
+		)
+
+		love.graphics.pop()
+	end
+end
+
 -- Função para removar lixo
 function world:removeWaste(waste)
 	for i, w in ipairs(self.wasteList) do
@@ -855,6 +944,7 @@ function world:spawnWindow_drawInfoButton(textH, drawX, drawY, contentW, topHeig
 			self.spawnWindow.infoWindow.text = block.entity.curiosity or ""
 			self.spawnWindow.infoWindow.visible = true
 		end)
+		btn.sound = "assets/sounds/infobleep.ogg"
 		-- Registra o botão (para hitbox/click)
 		table.insert(self.spawnWindow.infoButtons, {
 			button = btn,
@@ -1335,6 +1425,20 @@ function world:refreshFishOrganicRate()
 end
 
 function world:update(dt)
+	-- Tocar som ambiente em loop
+	if not self.ambientSound:isPlaying() then
+		love.audio.play(self.ambientSound)
+	end
+
+	-- Geração de bolhas
+	self.bubbleTimer = self.bubbleTimer + dt
+	if self.bubbleTimer >= self.bubbleInterval then
+		for _= 1, 10  do
+			self:spawnBubble()
+		end
+		self.bubbleTimer = 0
+	end
+
 	-- Geração temporizada de massa orgânica pelos peixes
 	self.fishOrganicMatterTimer = self.fishOrganicMatterTimer + dt
 	self.fishOrganicMatterMultiplier = math.max(0, 1.0 - (#self.wasteList * self.fishOrganicMatterWasteImpact)) -- diminui 2.5% por lixo
@@ -1368,6 +1472,7 @@ function world:update(dt)
 		local wasteEntities = entitiesManager.getWasteList()
 
 		if #wasteEntities > 0 and #self.wasteList < self.wasteEventMaxAmount then
+			love.audio.play(self.wasteEventSound)
 			for _ = 1, math.random(3, 6) do
 				local wasteEnt = wasteEntities[math.random(1, #wasteEntities)]
 				self:spawnWaste(wasteEnt)
@@ -1399,7 +1504,7 @@ function world:update(dt)
 		if waste.y < waste.targetY then
 			waste.y = waste.y + (60 * dt)
 			if waste.y >= waste.targetY then
-				waste.y = waste.targetY
+				waste.y = math.min(wh-50,waste.targetY)
 				waste.targetY = 0
 			end
 			waste.normY = round3(waste.y / wh)
@@ -1430,6 +1535,9 @@ function world:update(dt)
 
 	-- Atualizar animações das sardinhas
 	self:updateShoalAnimations(dt)
+
+	-- Atualizar movimentação das bolhas
+	self:updateBubbles(dt)
 end
 
 function world:draw()
@@ -1484,6 +1592,9 @@ function world:draw()
 	self:drawFish()
 	-- Desenhar lixos
 	self:drawWaste()
+
+	-- Desenhar visuais
+	self:drawBubbles()
 
 	-- Botão de saída
 	UI.drawButton(self.backButton, self.uiFont)
@@ -1609,6 +1720,9 @@ function world:mousepressed(x, y, button)
 			local radius = waste.size * 0.5 * math.max(waste.width, waste.height) -- aproximação do “hit‑box”
 			if (x - waste.x) ^ 2 + (y - waste.y) ^ 2 <= radius ^ 2 then
 				-- Adicionar qualidade de remoção ao lixo
+				local wasteCollectSound = love.audio.newSource("assets/sounds/fast-woosh.ogg", "stream")
+				wasteCollectSound:setVolume(0.5)
+				love.audio.play(wasteCollectSound)
 				waste.removing = true
 				-- Apenas um lixo por clique (também evitando arrastar plantas próximas)
 				return
