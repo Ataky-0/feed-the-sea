@@ -163,5 +163,23 @@ function TestEntities:testLoadEntitiesMalformedJson()
     luaunit.assertFalse(ok)
 end
 
+-- Listas vazias de entidades
+function TestEntities:testEmptyEntityLists()
+    fake_fs["data/entities.json"] = [[
+    {
+        "fish": {},
+        "plant": {}
+    }
+    ]]
+
+    local fishList = entities.getFishList()
+    local plantList = entities.getPlantList()
+
+    luaunit.assertIsTable(fishList)
+    luaunit.assertIsTable(plantList)
+    luaunit.assertEquals(#fishList, 0)
+    luaunit.assertEquals(#plantList, 0)
+end
+
 -- Executa os testes
 os.exit(luaunit.LuaUnit.run())
