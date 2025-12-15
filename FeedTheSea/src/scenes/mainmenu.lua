@@ -4,9 +4,11 @@ local UI = require("src.ui")
 
 local mainmenu = {}
 local selected = 1
+local ww, wh = UI.getDimensions()
 
 function mainmenu:load()
-	local ww, wh = love.graphics.getDimensions()
+	-- Renova dimensões
+	ww, wh = UI.getDimensions()
 
 	-- título
 	self.title = "Feed the Sea"
@@ -20,7 +22,7 @@ function mainmenu:load()
 	local bx = (ww - bw) / 2
 	local by = wh * 0.4
 
-	local labels = { "Novo Jogo", "Carregar Jogo", "Opções" }
+	local labels = { "Novo Jogo", "Carregar Jogo", "Opções", "Sair" }
 	for i, text in ipairs(labels) do
 		local btn = UI.newButton(text, bx, by + (i - 1) * (bh + 15), bw, bh, function()
 			if text == "Opções" then
@@ -29,10 +31,16 @@ function mainmenu:load()
 				sceneManager:changeScene("newgame")
 			elseif text == "Carregar Jogo" then
 				sceneManager:changeScene("loadgame")
+			elseif text == "Sair" then
+				love.event.quit()
 			end
 		end)
 		table.insert(self.buttons, btn)
 	end
+end
+
+function mainmenu:unload()
+	mainmenu = nil
 end
 
 function mainmenu:update(dt)
@@ -40,9 +48,12 @@ function mainmenu:update(dt)
 end
 
 function mainmenu:draw()
-	local ww, wh = love.graphics.getDimensions()
+	local sx, sy = UI.getScale()
 
 	love.graphics.clear(0 / 255, 30 / 255, 80 / 255)
+
+	love.graphics.push()
+	love.graphics.scale(sx, sy)
 
 	-- título
 	UI.drawText(self.title, 0, wh * 0.2, ww, "center", { 1, 1, 1 }, self.titleFont)
@@ -52,6 +63,8 @@ function mainmenu:draw()
 	for _, b in ipairs(self.buttons) do
 		UI.drawButton(b, self.buttonFont)
 	end
+
+	love.graphics.pop()
 end
 
 function mainmenu:keypressed(key)
@@ -67,6 +80,8 @@ function mainmenu:keypressed(key)
 end
 
 function mainmenu:mousemoved(x, y, dx, dy, istouch)
+	x, y = UI.scaleMouse(x, y)
+
 	for _, b in ipairs(self.buttons) do
 		UI.updateButtonHover(b, x, y)
 	end

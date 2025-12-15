@@ -3,6 +3,17 @@ local json = require("src.lib.lunajson")
 
 local entitiesManager = {}
 
+-- Obtém os dados de um lixo pelo seu ID
+function entitiesManager.getWasteById(id)
+    local entities = assert(entitiesManager.loadEntities(), "Erro ao obter entidades")
+    local waste = entities.waste and entities.waste[id]
+    if waste then
+			waste.id = id
+			return waste
+    end
+    return nil
+end
+
 -- Obtém os dados de um peixe pelo seu ID
 function entitiesManager.getFishById(id)
     local entities = assert(entitiesManager.loadEntities(), "Erro ao obter entidades")
@@ -21,6 +32,17 @@ function entitiesManager.getPlantById(id)
     if plant then
 			plant.id = id
 			return plant
+    end
+    return nil
+end
+
+-- Obtém os dados de uma planta pelo seu ID
+function entitiesManager.getShoalById(id)
+    local entities = assert(entitiesManager.loadEntities(), "Erro ao obter entidades")
+    local shoal = entities.shoal and entities.shoal[id]
+    if shoal then
+			shoal.id = id
+			return shoal
     end
     return nil
 end
@@ -70,6 +92,38 @@ function entitiesManager.getPlantList()
 	end)
 
 	return plantList
+end
+
+-- Retorna a lista completa de plantas existentes
+function entitiesManager.getShoalList()
+	local entities = assert(entitiesManager.loadEntities(), "Erro ao obter entidades")
+	local shoalList = {}
+
+	-- Iterar sobre os cardumes na estrutura existente
+	for shoalId, shoalData in pairs(entities.shoal or {}) do
+		shoalData.id = shoalId -- Adicionar o ID ao objeto
+		table.insert(shoalList, shoalData)
+	end
+
+	table.sort(shoalList, function(a, b)
+		return a.id < b.id
+	end)
+
+	return shoalList
+end
+
+-- Retorna a lista completa de lixos existentes
+function entitiesManager.getWasteList()
+	local entities = assert(entitiesManager.loadEntities(), "Erro ao obter entidades")
+	local wasteList = {}
+
+	-- Iterar sobre os lixos na estrutura existente
+	for wasteId, wasteData in pairs(entities.waste or {}) do
+		wasteData.id = wasteId -- Adicionar o ID ao objeto
+		table.insert(wasteList, wasteData)
+	end
+
+	return wasteList
 end
 
 return entitiesManager

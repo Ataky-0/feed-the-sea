@@ -4,22 +4,128 @@
 			"name": "Sardinha",
 			"sprite": "sardine.png",
 			"diet": "herbivore",
+			"description": "Este peixe de pequeno porte apresenta um baixo consumo de oxigênio (%.2f) além de uma dieta reduzida (%.2f). No ambiente, por conta de seu pequeno corpo, produz uma quantidade modesta de matéria orgânica (%.2f), contribuindo discretamente para o equilíbrio do ecossistema.",
+			"curiosity": "As sardinhas são conhecidas por formarem grandes cardumes, o que lhes proporciona proteção contra predadores e aumenta sua eficiência na busca por alimento.",
 			"size": 0.5,
 			"oxygen_cost": 0.35,
 			"nutrient_cost": 0.1,
-			"biomass_production": 0.025
+			"organic_production": 0.025,
+			"limit": 20
+		},
+		"fish002": {
+			"name": "Tilápia",
+			"sprite": "tilapia.png",
+			"diet": "herbivore",
+			"description": "Esta espécie de porte moderado apresenta um consumo de oxigênio relativamente elevado (%.2f) em relação ao seu antecessor e portanto demanda de uma dieta herbívora compatível (%.2f). Cada indivíduo gera uma quantidade considerável de matéria orgânica (%.2f), influenciando de forma perceptível o ecossistema.",
+			"curiosity": "A tilápia é uma das espécies de peixes mais cultivadas no mundo devido à sua adaptabilidade a diferentes ambientes e à sua rápida taxa de crescimento.",
+			"size": 1.1,
+			"oxygen_cost": 0.65,
+			"nutrient_cost": 0.22,
+			"organic_production": 0.06,
+			"limit": 12
+		},
+		"fish003": {
+			"name": "Cavala",
+			"sprite": "atlantic-mackerel.png",
+			"diet": "carnivore",
+			"description": "A cavala é um peixe de porte semelhante à tilápia, porém com metabolismo mais intenso por ser carnívora. Apresenta um consumo de oxigênio elevado (%.2f), exigindo uma dieta rica em nutrientes animais (%.2f). Produz uma quantidade significativa de matéria orgânica (%.2f), refletindo sua alta atividade no ambiente.",
+			"curiosity": "A cavala é conhecida por sua velocidade e por nadar em grandes cardumes costeiros, sendo um predador ativo que desempenha papel essencial no controle de populações menores de peixes.",
+			"size": 1.05,
+			"oxygen_cost": 0.78,
+			"nutrient_cost": 0.30,
+			"organic_production": 0.075,
+			"limit": 10
+		},
+		"fish004": {
+			"name": "Peixe-Palhaço",
+			"sprite": "clownfish.png",
+			"diet": "herbivore",
+			"description": "O peixe-palhaço é um pequeno peixe colorido. Possui um baixo consumo de oxigênio (%.2f) e uma dieta baseada principalmente em plantas (%.2f). Sua produção de matéria orgânica (%.2f) é modesta, mas sua presença é importante para o equilíbrio do ecossistema marinho.",
+			"curiosity": "O peixe-palhaço vive em simbiose com anêmonas-do-mar, onde encontra proteção contra predadores em troca de alimentos que consome da anêmona.",
+			"size": 0.3,
+			"oxygen_cost": 0.25,
+			"nutrient_cost": 0.08,
+			"organic_production": 0.02,
+			"limit": 30
 		}
 	},
 	"plant": {
 		"plant001": {
 			"name": "Alga",
 			"sprite": "seaweed.png",
+			"description": "Esta planta aquática de pequeno porte contribui significativamente para o ambiente por meio da produção de oxigênio (%.2f) e do fornecimento de nutrientes para herbívoros (%.2f). Em contrapartida, apresenta um consumo não tão pequeno de matéria orgânica (%.2f), desempenhando um papel equilibrado no ciclo ecológico.",
+			"curiosity": "As algas marinhas são essenciais para a saúde dos ecossistemas aquáticos, pois produzem grande parte do oxigênio que respiramos e servem como base da cadeia alimentar marinha.",
+			"produces": "herbivore",
 			"oxygen_production": 1,
 			"nutrient_value": 0.5,
-			"biomass_cost": 2.5,
+			"organic_cost": 2.5,
+			"size": 0.4,
+			"limit": 8,
+			"w": 296,
+			"h": 511
+		},
+		"plant002": {
+			"name": "Capim-marinho",
+			"sprite": "seagrass.png",
+			"description": "Planta aquática densa que melhora a oxigenação do ambiente (%.2f) e fornece bons nutrientes para herbívoros (%.2f), ajudando a sustentar peixes maiores, mas exigindo um consumo elevado de matéria orgânica (%.2f).",
+			"curiosity": "Capins-marinhos formam verdadeiros berçários naturais para cardumes e ajudam a estabilizar o ecossistema.",
+			"produces": "herbivore",
+			"oxygen_production": 1.8,
+			"nutrient_value": 0.9,
+			"organic_cost": 4.5,
+			"size": 0.30,
+			"limit": 5,
+			"w": 391,
+			"h": 416
+		}
+	},
+	"shoal": {
+		"shoal001": {
+			"name": "Cardume de Sardinhas",
+			"sprite": "sardine-shoal.png",
+			"description": "Este agrupamento de sardinhas consome uma quantidade moderada de oxigênio (%.2f) e se alimenta de nutrientes herbívoros de forma eficiente (%.2f). Em troca, o cardume gera nutrientes essenciais para peixes carnívoros (%.2f), desempenhando um papel importante na dinâmica alimentar do ecossistema.",
+			"curiosity": "Cardumes de sardinhas podem se estender por quilômetros, formando verdadeiras nuvens no oceano que são visíveis até do espaço.",
+			"diet": "herbivore",
+			"produces": "carnivore",
+			"oxygen_cost": 1.25,
+			"nutrient_cost": 0.35,
+			"nutrient_value": 0.35,
 			"size": 0.35,
-			"w": 380,
-			"h": 387
+			"limit": 5,
+			"w": 270,
+			"h": 450
+		}
+	},
+	"waste": {
+		"broken-glass": {
+			"name": "Vidro Quebrado",
+			"sprite": "broken-glass.png",
+			"size": 0.6
+		},
+		"lost-tire": {
+			"name": "Pneu Perdido",
+			"sprite": "lost-tire.png",
+			"size": 0.9
+		},
+		"net-waste": {
+			"name": "Rede de Pesca",
+			"sprite": "net-waste.png",
+			"size": 1.2
+		},
+		"plastic-bag": {
+			"name": "Saco Plástico",
+			"sprite": "plastic-bag.png",
+			"size": 0.65
+		},
+		"plastic-bottle": {
+			"name": "Garrafa Plástica",
+			"sprite": "plastic-bottle.png",
+			"size": 0.6
+		},
+		"sandal": {
+			"name": "Chinelo",
+			"sprite": "sandal.png",
+			"size": 0.6
 		}
 	}
 }

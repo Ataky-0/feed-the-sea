@@ -5,14 +5,17 @@ local savesManager = require("src.savesManager")
 
 local loadgame = {}
 
+local ww, wh = UI.getDimensions()
+
 function loadgame:load()
+	-- Renova dimensões
+	ww, wh = UI.getDimensions()
+
 	self.title = "Carregar Jogo"
 	self.titleFont = love.graphics.newFont(48)
 	self.navFont = love.graphics.newFont(20)
 	self.itemFont = love.graphics.newFont(18)
 	self.smallFont = love.graphics.newFont(14)
-
-	local ww, wh = love.graphics.getDimensions()
 
 	-- Botões de navegação
 	self.backButton = UI.newButton("<", 10, 10, 60, 50, function()
@@ -33,9 +36,13 @@ function loadgame:load()
 
 	self.saves = savesManager.listSaves()
 	self.currentPage = 1
-	self.perPage = 6       -- 2 colunas x 3 linhas
+	self.perPage = 9        -- 2 colunas x 3 linhas
 	self.confirmDialog = nil -- confirmação de deletar
 	self:updatePagination()
+end
+
+function loadgame:unload()
+	loadgame = nil
 end
 
 -- Dinamicamente calcula o total de páginas
@@ -44,34 +51,50 @@ function loadgame:updatePagination()
 end
 
 -- Abre uma janela de confirmação para deletar 'save'
-function loadgame:openConfirm(save)
+function loadgame:openConfirm(save) -- Fix: precisa ajeitar a escala disso aqui ainda
 	-- não abrir outra se já existir
 	if self.confirmDialog then return end
 
-	local ww, wh = love.graphics.getDimensions()
-	local text = string.format("Deseja realmente deletar o %s?", save.name or "save")
+	local sx, sy = UI.getScale()
+
+	local text = string.format(
+		"Deseja realmente deletar o %s?",
+		save.name or "save"
+	)
+
 	local msg = UI.newMessage(text, self.smallFont)
 	msg.x = ww / 2
 	msg.y = wh / 2
-	msg.closable = false -- fechamos via botões
+	msg.closable = false
 	msg._saveRef = save
 
-	-- calcular botões posicionados abaixo da mensagem
+	-- ===== ESCALA REAL (AQUI TÁ O SEGREDO) =====
+
+	local scale = math.min(sx, sy)
+
+	local padding = math.floor(20 * scale)
+	local spacing = math.floor(20 * scale)
+
+	local btnW = math.floor(100 * scale)
+	local btnH = math.floor(42 * scale)
+
+	-- limites de sanidade
+	btnW = math.max(90, math.min(btnW, 160))
+	btnH = math.max(36, math.min(btnH, 60))
+
+	-- Texto
 	local tw = msg.font:getWidth(msg.text)
 	local th = msg.font:getHeight()
-	local padding = 16
+
 	local boxW = tw + padding * 2
-	local boxH = th + padding
+	local boxH = th + padding * 2
 
-	local btnW, btnH = 80, 36
-	local spacing = 16
+	-- Botões centralizados abaixo da caixa
 	local totalBtnsW = btnW * 2 + spacing
-
 	local bx = msg.x - totalBtnsW / 2
-	local by = msg.y + boxH / 2 + 12
+	local by = msg.y + boxH / 2 + spacing
 
 	msg._yesBtn = UI.newButton("Sim", bx, by, btnW, btnH, function()
-		-- executar deleção
 		savesManager.deleteSave(msg._saveRef.file)
 		self.saves = savesManager.listSaves()
 		self:updatePagination()
@@ -112,20 +135,45 @@ function loadgame:updateConfirmPositions()
 end
 
 function loadgame:draw()
-	local ww, wh = love.graphics.getDimensions()
+	local sx, sy = UI.getScale()
+
 	love.graphics.clear(0 / 255, 30 / 255, 80 / 255)
+
+	love.graphics.push()
+	love.graphics.scale(sx, sy)
 
 	-- Título
 	UI.drawText(self.title, 0, 30, ww, "center", { 1, 1, 1 }, self.titleFont)
 
-	-- Botões principais
+	-- Botão voltar
 	UI.drawButton(self.backButton, self.navFont)
 
-	-- Layout da página
-	local startX, startY = ww * 0.1, 110
-	local cardW, cardH = 300, 125
+	-- ===== LAYOUT RESPONSIVO 3x3 =====
+
+	local cols, rows = 3, 3
 	local spacingX, spacingY = 30, 30
-	local cols = 2
+
+	local marginTop = 110
+	local marginSide = 80
+	local marginBottom = 100
+
+	local usableW = ww - marginSide * 2
+	local usableH = wh - marginTop - marginBottom
+
+	local cardW = math.min(
+		500,
+		(usableW - spacingX * (cols - 1)) / cols
+	)
+
+	local cardH = math.min(
+		200,
+		(usableH - spacingY * (rows - 1)) / rows
+	)
+
+	local startX = (ww - (cardW * cols + spacingX * (cols - 1))) / 2
+	local startY = marginTop
+
+	-- ===== PAGINAÇÃO =====
 
 	local startIdx = (self.currentPage - 1) * self.perPage + 1
 	local endIdx = math.min(startIdx + self.perPage - 1, #self.saves)
@@ -142,7 +190,7 @@ function loadgame:draw()
 		self:drawSaveCard(save, x, y, cardW, cardH)
 	end
 
-	-- Navegação de página
+	-- Navegação
 	if self.currentPage > 1 then
 		UI.drawButton(self.prevPageButton, self.navFont)
 	end
@@ -151,24 +199,25 @@ function loadgame:draw()
 		UI.drawButton(self.nextPageButton, self.navFont)
 	end
 
-	-- Info de página
 	UI.drawText(
 		string.format("Página %d / %d", self.currentPage, self.totalPages),
 		0, wh - 40, ww, "center", { 1, 1, 1 }, self.navFont
 	)
 
-	-- Se houver diálogo de confirmação, desenhar por cima
+	-- Confirmação
 	if self.confirmDialog then
 		self:updateConfirmPositions()
 		UI.drawMessage(self.confirmDialog)
 		UI.drawButton(self.confirmDialog._yesBtn, self.smallFont)
 		UI.drawButton(self.confirmDialog._noBtn, self.smallFont)
 	end
+
+	love.graphics.pop()
 end
 
 -- Desenhar caixa de save (unidade)
 function loadgame:drawSaveCard(save, x, y, w, h)
-	-- Fundo do card
+	-- Fundo
 	love.graphics.setColor(0.1, 0.3, 0.6)
 	love.graphics.rectangle("fill", x, y, w, h, 16, 16)
 
@@ -179,10 +228,11 @@ function loadgame:drawSaveCard(save, x, y, w, h)
 	love.graphics.setFont(self.itemFont)
 	local maxWidth = w - 20
 	local name = save.name
-	while self.itemFont:getWidth(name) > maxWidth do
+
+	while self.itemFont:getWidth(name) > maxWidth and #name > 3 do
 		name = name:sub(1, -2)
-		if #name <= 3 then break end
 	end
+
 	if self.itemFont:getWidth(save.name) > maxWidth then
 		name = name:sub(1, -4) .. "..."
 	end
@@ -192,28 +242,44 @@ function loadgame:drawSaveCard(save, x, y, w, h)
 
 	-- Última visita
 	love.graphics.setFont(self.smallFont)
-	love.graphics.setColor(0.8, 0.8, 0.8)
-	love.graphics.printf("Última visita: " .. save.last_played, x + 10, y + 40, maxWidth, "left")
+	love.graphics.setColor(0.85, 0.85, 0.85)
+	love.graphics.printf(
+		"Última visita: " .. save.last_played,
+		x + 10, y + 40, maxWidth, "left"
+	)
 
-	-- Botões
+	-- Botões (CRIADOS UMA VEZ, POSIÇÃO ATUALIZADA SEMPRE)
+	local pad = math.floor(w * 0.03)
+
+	local btnW = math.min(200, math.max(120, w * 0.4))
+	local btnH = math.min(65, math.max(40, h * 0.28))
+
+	local btnY = y + h - btnH - pad
+
 	if not save._loadBtn then
-		save._loadBtn = UI.newButton("Carregar", x + 10, y + h - 45, 120, 35, function()
+		save._loadBtn = UI.newButton("Carregar", 0, 0, btnW, btnH, function()
 			print("Carregando save:", save.file)
 			-- Troca a cena para o mundo
 			sceneManager:changeScene("world", save)
 		end)
 
-		local s = save -- capturar referência local
-		save._deleteBtn = UI.newButton("Deletar", x + w - 130, y + h - 45, 120, 35, function()
-			self:openConfirm(s)
+		save._deleteBtn = UI.newButton("Deletar", 0, 0, btnW, btnH, function()
+			self:openConfirm(save)
 		end)
 	end
+
+	save._loadBtn.x = x + pad
+	save._loadBtn.y = btnY
+
+	save._deleteBtn.x = x + w - btnW - pad
+	save._deleteBtn.y = btnY
 
 	UI.drawButton(save._loadBtn, self.smallFont)
 	UI.drawButton(save._deleteBtn, self.smallFont)
 end
 
 function loadgame:mousemoved(x, y)
+	x, y = UI.scaleMouse(x, y)
 	-- se houver diálogo, apenas atualizar hover dos botões do diálogo
 	if self.confirmDialog then
 		UI.updateButtonHover(self.confirmDialog._yesBtn, x, y)
@@ -232,6 +298,7 @@ function loadgame:mousemoved(x, y)
 end
 
 function loadgame:mousepressed(x, y, button)
+	x, y = UI.scaleMouse(x, y)
 	-- se houver diálogo, apenas processar os botões do diálogo
 	if self.confirmDialog then
 		local yesBtn = self.confirmDialog._yesBtn

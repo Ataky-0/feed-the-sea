@@ -26,6 +26,22 @@ function sceneManager:changeScene(name, ...)
 	end
 end
 
+function sceneManager:reloadScene(...)
+	if not self.current then
+		return
+	end
+
+	-- descarrega a cena atual, se tiver
+	if self.current.unload then
+		self.current:unload()
+	end
+
+	-- recarrega o módulo da cena atual
+	if self.current.load then
+		self.current:load(...)
+	end
+end
+
 function sceneManager:update(dt)
 	if self.current and self.current.update then
 		self.current:update(dt)
@@ -35,6 +51,12 @@ end
 function sceneManager:draw()
 	if self.current and self.current.draw then
 		self.current:draw()
+	end
+end
+
+function sceneManager:wheelmoved(x, y)
+	if self.current and self.current.wheelmoved then
+		self.current:wheelmoved(x, y)
 	end
 end
 
@@ -65,6 +87,12 @@ end
 function sceneManager:mousepressed(x, y, button, istouch, presses)
 	if self.current and self.current.mousepressed then
 		self.current:mousepressed(x, y, button, istouch, presses)
+	end
+end
+
+function sceneManager:mousereleased(x, y, button, istouch, presses)
+	if self.current and self.current.mousereleased then
+		self.current:mousereleased(x, y, button, istouch, presses)
 	end
 end
 
